@@ -1,63 +1,71 @@
 #  Controle de Almoxarifado CGH 
 
-![.NET](https://img.shields.io/badge/.NET%2010-512BD4?style=for-the-badge&logo=dotnet&logoColor=white)
+Tech Stack & Arquitetura
+
+![.NET 10](https://img.shields.io/badge/.NET%2010-512BD4?style=for-the-badge&logo=dotnet&logoColor=white)
 ![C#](https://img.shields.io/badge/C%23-239120?style=for-the-badge&logo=c-sharp&logoColor=white)
 ![Blazor](https://img.shields.io/badge/Blazor-5C2D91?style=for-the-badge&logo=blazor&logoColor=white)
 ![MudBlazor](https://img.shields.io/badge/MudBlazor-594AE2?style=for-the-badge&logo=blazor&logoColor=white)
+![SQLite](https://img.shields.io/badge/SQLite-07405E?style=for-the-badge&logo=sqlite&logoColor=white)
 ![EF Core](https://img.shields.io/badge/EF%20Core-336791?style=for-the-badge&logo=microsoft-sql-server&logoColor=white)
+![DDD](https://img.shields.io/badge/DDD-Architecture-007ACC?style=for-the-badge)
+![Git](https://img.shields.io/badge/Git-F05032?style=for-the-badge&logo=git&logoColor=white)
 
-Sistema corporativo de ponta a ponta desenvolvido para a gestão inteligente de ativos operacionais, montagem de kits e controle de fluxo de estoque (check-in/check-out) de mochilas e equipamentos.
+Sistema inteligente de gestão de inventário e rastreabilidade logística desenvolvido especificamente para a operação do aeroporto de Congonhas. Este sistema visa eliminar a dependência de planilhas manuais, garantindo auditoria, controle de estoque em tempo real e facilidade operacional para a equipe.
 
-##  Objetivo do Projeto
-Este projeto foi construído para resolver um problema real de logística operacional: garantir que equipes recebam seus equipamentos (tablets, rádios, etc.) organizados em kits (Mochilas) de forma rastreável, rápida e segura. 
+## O Problema que Resolvemos
+Atualmente, o controle via planilhas manuais gera:
 
-Além de resolver uma dor de negócio, este repositório serve como uma **vitrine técnica** da minha capacidade de construir aplicações escaláveis utilizando as melhores práticas da plataforma .NET.
+Erros de digitação e inconsistência: Dificuldade em rastrear quem está com qual equipamento.
 
-##  Arquitetura e Padrões (Domain-Driven Design)
-A solução foi desenhada utilizando **Domain-Driven Design (DDD)** para garantir a separação de responsabilidades, testabilidade e evolução contínua do software. A solução está dividida em três camadas principais:
+Falta de Auditoria: Impossibilidade de verificar o histórico detalhado de movimentações em casos de avarias ou extravios.
 
-* **`Almoxarifado.Domain`**: O coração da aplicação. Contém as Regras de Negócio, Entidades Ricas (ex: `Mochila`, `Equipamento`), Enums e *Value Objects* (`OperacaoTurno`). Nenhuma dependência externa entra aqui.
-* **`Almoxarifado.Infrastructure`**: Responsável pela persistência de dados. Implementa o `AppDbContext` do Entity Framework Core, mapeamento de tabelas e as *Migrations*.
-* **`AlmoxarifadoCGH.Web`**: Camada de apresentação reativa e em tempo real utilizando **Blazor Server**. A interface foi desenhada com componentes **MudBlazor** para um aspecto moderno (Material Design) e responsivo.
+Complexidade Tecnológica: Sistemas corporativos que exigem infraestrutura de TI pesada e instalação complexa.
 
-##  Principais Funcionalidades
-* **Gestão de Kits (Mochilas)**: Criação de mochilas e vinculação física de equipamentos (através de números de série) garantindo a integridade do kit.
-* **Rastreamento de Operações**: Histórico de saídas e entradas, vinculando o kit a uma dupla operacional e turno de trabalho.
-* **Dashboard em Tempo Real**: Painel com indicadores de equipamentos atrasados, estoque crítico e métricas de saída do turno.
-* **Gestão de Catálogo e Patrimônio**: Controle de itens consumíveis (estoque) e itens de patrimônio único (seriais).
+## Funcionalidades Principais
+1. Gestão de Kits (Mochilas)
+Montagem de Kits: Sistema inteligente que exige a seleção exata de 4 equipamentos (Tablet, DWS e Rádios), evitando erros na formação das mochilas.
 
-##  Destaques Técnicos
-* **C# 14 & .NET 10**: Utilização das versões mais recentes do ecossistema Microsoft.
-* **Entity Framework Core**: Mapeamento Objeto-Relacional avançado, utilizando `IDbContextFactory` para lidar com a concorrência assíncrona do Blazor Server.
-* **Componentização Blazor**: Criação de modais dinâmicos, tabelas assíncronas e formulários validados sem escrever uma única linha de JavaScript.
+Check-out e Check-in: Fluxo simplificado para entrega e devolução dos kits, associando duplas operacionais aos equipamentos.
 
-##  Como executar o projeto localmente
+2. Controle de Estoque com Validação
+Catálogo Inteligente: Cadastro de consumíveis (ex: bobinas) e equipamentos (ex: rádios), com validação rigorosa para evitar dados duplicados ou inconsistentes.
 
-**Pré-requisitos:**
-* [.NET 10 SDK](https://dotnet.microsoft.com/download)
-* Visual Studio 2022+ ou VS Code
-* SQL Server (LocalDB ou instância Docker)
+Alertas Críticos: Dashboards que indicam instantaneamente itens com estoque abaixo do mínimo exigido.
 
-**Passo a passo:**
-1. Clone o repositório:
-   ```bash
-   git clone [https://github.com/LuizhBrandao/ControleAlmoxarifadoCGH.git](https://github.com/LuizhBrandao/ControleAlmoxarifadoCGH.git)
-   ```
+3. Rastreabilidade e Auditoria (Compliance)
+Histórico Completo: Cada movimentação (saída/entrada) registra quem foi o agente, qual o horário, qual o kit e quais os números de série dos equipamentos.
 
-2. Navegue até a pasta do projeto de Infraestrutura e aplique as migrações para criar o banco de dados:
+Bloqueio de Exclusão: Patrimônios que já possuíram histórico de circulação não podem ser apagados, garantindo a integridade dos dados para auditorias.
 
-````Bash
-cd ControleAlmoxarifadoCGH/Almoxarifado.Infrastructure
-dotnet ef database update --startup-project ../AlmoxarifadoCGH.Web
-````
-3. Execute o projeto Web:
+4. Segurança e Integridade
+Validações Rigorosas: O sistema utiliza Data Annotations (Regex) para bloquear caracteres inválidos em nomes, números de série e matrículas de agentes.
 
-````Bash
-cd ../AlmoxarifadoCGH.Web
-dotnet run
-````
-4. Acesse no navegador através de https://localhost:7029 (ou a porta indicada no terminal).
+Campos Protegidos: Identificadores únicos (Matrículas e Patrimônios) são bloqueados para edição após o cadastro, prevenindo fraudes ou alterações acidentais.
 
- Autor
+## Detalhes Técnicos para TI e Operação
+O sistema foi arquitetado para ser um produto "Plug and Play":
+
+Arquitetura: ASP.NET Core Blazor (Server-Side) + MudBlazor (Interface moderna e responsiva).
+
+Portabilidade: Utiliza o banco de dados SQLite, um ficheiro único que não requer instalação de servidores complexos (como SQL Server) ou configuração de rede.
+
+Segurança: Baseado em princípios DDD (Domain-Driven Design), com validações que ocorrem tanto no ecrã (UI) quanto na base de dados (Infraestrutura).
+
+Configuração: Zero infraestrutura. O sistema cria automaticamente a sua própria base de dados no primeiro acesso.
+
+## Como Iniciar (Para Operadores)
+Executar: Basta dar dois cliques no ficheiro executável do sistema.
+
+Primeiro Acesso: Na primeira vez que abrir, o sistema configurará automaticamente todos os ficheiros necessários.
+
+Interface: Navegue pelo menu lateral para acessar o Balcão, consultar o Histórico ou gerir o Catálogo.
+
+Segurança: O sistema impede automaticamente a gravação de dados incompletos ou inválidos, guiando o utilizador em cada etapa.
+
+## Compromisso de Integridade
+Este software foi desenvolvido com a premissa de que a operação aeroportuária não admite erros. Cada equipamento está vinculado a uma dupla de agentes e cada saída/entrada é registrada permanentemente.
+
+## Autor
 Luiz Henrique Oliveira Brandão
 Desenvolvedor de Software Júnior focado em criar soluções robustas e agregar valor através da tecnologia.
