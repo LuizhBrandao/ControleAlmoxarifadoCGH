@@ -1,84 +1,97 @@
 ﻿@page "/gestao-mochilas"
-@rendermode InteractiveServer
+@using AlmoxarifadoCGH.Web.Services
 @using Almoxarifado.Domain.Entities
 @using Almoxarifado.Domain.Enums
 @using Almoxarifado.Domain.ValueObjects
-@using AlmoxarifadoCGH.Web.Services
-@using MudBlazor
 @inject EstoqueService EstoqueService
 @inject IDialogService DialogService
-@inject ISnackbar Snackbar
 
 <MudContainer MaxWidth="MaxWidth.Large" Class="mt-6">
-    <MudText Typo="Typo.h4" Class="mb-6">Gestão de Mochilas (Kits)</MudText>
+    <div class="d-flex justify-space-between align-center mb-6">
+        <MudText Typo="Typo.h4">Gestão de Mochilas (Kits)</MudText>
+        <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Add" OnClick="AbrirDialogoNovaMochila">
+            Nova Mochila
+        </MudButton>
+    </div>
 
-    <MudTable Items="@todasMochilas" Hover="true" Elevation="2">
+    <MudTable Items="@mochilas" Hover="true" Elevation="3">
         <HeaderContent>
             <MudTh>Número</MudTh>
             <MudTh>Status</MudTh>
             <MudTh>Operação Atual</MudTh>
             <MudTh>Ações</MudTh>
         </HeaderContent>
-        <RowTemplate Context="mochila">
-            <MudTd DataLabel="Número">Mochila @mochila.Numero</MudTd>
+        <RowTemplate>
+            <MudTd DataLabel="Número">Mochila @context.Numero</MudTd>
             <MudTd DataLabel="Status">
-                @if (mochila.Status == StatusMochila.Disponivel)
+                <MudChip T="string" Color="@GetStatusColor(context.Status)" Size="Size.Small">@context.Status.ToString()</MudChip>
+            </MudTd>
+            <MudTd DataLabel="Operação Atual">
+                @if (context.OperacaoAtual != null)
                 {
-                    <MudChip T="string" Color="Color.Success">Pronta (Disponível)</MudChip>
-                }
-                else if (mochila.Status == StatusMochila.EmUso)
-                {
-                    <MudChip T="string" Color="Color.Warning">Em Uso</MudChip>
+                    <MudText Typo="Typo.body2">@context.OperacaoAtual.Turno - @context.OperacaoAtual.Dupla</MudText>
                 }
                 else
                 {
-                    <MudChip T="string" Color="Color.Error">Manutenção / Incompleta</MudChip>
+                    <MudText Typo="Typo.body2" Color="Color.Surface">Nenhuma</MudText>
                 }
             </MudTd>
-            <MudTd DataLabel="Operação Atual">
-                @(mochila.OperacaoAtual != null ? $"{mochila.OperacaoAtual.Turno} - {mochila.OperacaoAtual.Dupla}" : "Nenhuma")
-            </MudTd>
             <MudTd DataLabel="Ações">
-                <MudButton Variant="Variant.Outlined" Color="Color.Primary" Size="Size.Small" OnClick="@(() => AbrirDialogoMontagem(mochila))">
-                    @(mochila.Status == StatusMochila.Disponivel ? "Ver/Editar Kit" : "Montar Kit")
-                </MudButton>
+                <MudButton Variant="Variant.Outlined" Color="Color.Secondary" Size="Size.Small" OnClick="@(() => AbrirDialogoMontarKit(context.Id))">Montar Kit</MudButton>
             </MudTd>
         </RowTemplate>
     </MudTable>
 </MudContainer>
 
 @code {
-    private List<Mochila> todasMochilas = new();
+    private List<Mochila> mochilas = new();
 
     protected override async Task OnInitializedAsync()
     {
-        // 1. Garante que as 12 existem
-        //await EstoqueService.GarantirMochilasIniciaisAsync();
-
-        // 2. Carrega para a tela
         await CarregarDados();
     }
 
     private async Task CarregarDados()
     {
-        todasMochilas = await EstoqueService.ListarTodasMochilasAsync();
+        mochilas = await EstoqueService.ListarTodasMochilasAsync();
+        StateHasChanged();
     }
 
-    private async Task AbrirDialogoMontagem(Mochila mochila)
+    private async Task AbrirDialogoNovaMochila()
     {
-        if (mochila.Status == StatusMochila.EmUso)
-        {
-            Snackbar.Add("Não é possível alterar os itens de uma mochila que está em uso no turno.", Severity.Warning);
-            return;
-        }
-
-        var parameters = new DialogParameters { ["Mochila"] = mochila };
-        var dialog = await DialogService.ShowAsync<MontarKitDialog>($"Montar Kit - Mochila {mochila.Numero}", parameters);
+        var options = new DialogOptions { CloseOnEscapeKey = true, MaxWidth = MaxWidth.Small, FullWidth = true };
+        var dialog = await DialogService.ShowAsync<NovaMochilaDialog>("Adicionar Nova Mochila", options);
         var result = await dialog.Result;
 
         if (result != null && !result.Canceled)
         {
-            await CarregarDados();
+            await CarregarDados(); // Recarrega a tabela se uma mochila foi adicionada
         }
     }
+
+    private Color GetStatusColor(StatusMochila status)
+    {
+        return status switch
+        {
+            StatusMochila.Disponivel => Color.Success,
+            StatusMochila.EmUso => Color.Warning,
+            StatusMochila.Manutencao => Color.Error,
+            _ => Color.Default
+        };
+    }
+    private async Task AbrirDialogoMontarKit(int mochilaId)
+    {
+        // Passa o ID da mochila específica para dentro do Dialog
+        var parameters = new DialogParameters { ["MochilaId"] = mochilaId };
+        var options = new DialogOptions { CloseOnEscapeKey = true, MaxWidth = MaxWidth.Small, FullWidth = true };
+
+        var dialog = await DialogService.ShowAsync<MontarKitDialog>("Montar Kit da Mochila", parameters, options);
+        var result = await dialog.Result;
+
+        if (result != null && !result.Canceled)
+        {
+            await CarregarDados(); // Atualiza a tela após montar
+        }
+    }
+
 }

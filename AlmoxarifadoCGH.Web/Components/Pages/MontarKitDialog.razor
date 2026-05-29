@@ -1,67 +1,98 @@
-﻿@using Almoxarifado.Domain.Entities
-@using Almoxarifado.Domain.ValueObjects
-@using AlmoxarifadoCGH.Web.Services
+﻿@using AlmoxarifadoCGH.Web.Services
+@using Almoxarifado.Domain.Entities
 @using MudBlazor
 @inject EstoqueService EstoqueService
 @inject ISnackbar Snackbar
 
 <MudDialog>
     <DialogContent>
-        <MudText Typo="Typo.body2" Class="mb-4">Digite os números de série (patrimônio) dos equipamentos para a Mochila @Mochila.Numero.</MudText>
+        <MudText Typo="Typo.body2" Class="mb-4">Selecione os equipamentos disponíveis na prateleira para compor este kit:</MudText>
 
-        <MudTextField @bind-Value="serialTablet" Label="1 Tablet" Variant="Variant.Outlined" Class="mb-3" Autofocus="true" />
-        <MudTextField @bind-Value="serialDws" Label="1 DWS" Variant="Variant.Outlined" Class="mb-3" />
-        <MudTextField @bind-Value="serialRadio1" Label="Rádio 1" Variant="Variant.Outlined" Class="mb-3" />
-        <MudTextField @bind-Value="serialRadio2" Label="Rádio 2" Variant="Variant.Outlined" Class="mb-3" />
+        <MudSelect T="string" @bind-Value="serial1" Label="1. Tablet" Variant="Variant.Outlined" Class="mb-3" AnchorOrigin="Origin.BottomCenter">
+            <MudSelectItem T="string" Value="@("")">-- Selecione um Tablet --</MudSelectItem>
+            @foreach (var eq in tabletsDisponiveis)
+            {
+                <MudSelectItem T="string" Value="@eq.NumeroSerie">@eq.NumeroSerie</MudSelectItem>
+            }
+        </MudSelect>
+
+        <MudSelect T="string" @bind-Value="serial2" Label="2. DWS" Variant="Variant.Outlined" Class="mb-3" AnchorOrigin="Origin.BottomCenter">
+            <MudSelectItem T="string" Value="@("")">-- Selecione um DWS --</MudSelectItem>
+            @foreach (var eq in dwsDisponiveis)
+            {
+                <MudSelectItem T="string" Value="@eq.NumeroSerie">@eq.NumeroSerie</MudSelectItem>
+            }
+        </MudSelect>
+
+        <MudSelect T="string" @bind-Value="serial3" Label="3. Rádio (Unidade 1)" Variant="Variant.Outlined" Class="mb-3" AnchorOrigin="Origin.BottomCenter">
+            <MudSelectItem T="string" Value="@("")">-- Selecione o 1º Rádio --</MudSelectItem>
+            @foreach (var eq in radiosDisponiveis)
+            {
+                <MudSelectItem T="string" Value="@eq.NumeroSerie">@eq.NumeroSerie</MudSelectItem>
+            }
+        </MudSelect>
+
+        <MudSelect T="string" @bind-Value="serial4" Label="4. Rádio (Unidade 2)" Variant="Variant.Outlined" Class="mb-2" AnchorOrigin="Origin.BottomCenter">
+            <MudSelectItem T="string" Value="@("")">-- Selecione o 2º Rádio --</MudSelectItem>
+            @foreach (var eq in radiosDisponiveis)
+            {
+                <MudSelectItem T="string" Value="@eq.NumeroSerie">@eq.NumeroSerie</MudSelectItem>
+            }
+        </MudSelect>
+
     </DialogContent>
     <DialogActions>
         <MudButton OnClick="Cancelar">Cancelar</MudButton>
-        <MudButton Color="Color.Success" Variant="Variant.Filled" OnClick="SalvarKit" Disabled="!PodeSalvar">Salvar Kit</MudButton>
+        <MudButton Color="Color.Primary" Variant="Variant.Filled" OnClick="Salvar">Montar Kit</MudButton>
     </DialogActions>
 </MudDialog>
 
 @code {
-    [CascadingParameter] public IMudDialogInstance MudDialog { get; set; } = null!;
+    [CascadingParameter] IMudDialogInstance MudDialog { get; set; } = null!;
+    [Parameter] public int MochilaId { get; set; }
 
-    [Parameter] public Mochila Mochila { get; set; } = null!;
+    private string serial1 = "";
+    private string serial2 = "";
+    private string serial3 = "";
+    private string serial4 = "";
 
-    private string serialTablet = "";
-    private string serialDws = "";
-    private string serialRadio1 = "";
-    private string serialRadio2 = "";
+    // Listas para guardar os equipamentos que vieram do banco
+    private List<Equipamento> tabletsDisponiveis = new();
+    private List<Equipamento> dwsDisponiveis = new();
+    private List<Equipamento> radiosDisponiveis = new();
 
-    private bool PodeSalvar => !string.IsNullOrWhiteSpace(serialTablet) &&
-                               !string.IsNullOrWhiteSpace(serialDws) &&
-                               !string.IsNullOrWhiteSpace(serialRadio1) &&
-                               !string.IsNullOrWhiteSpace(serialRadio2);
-
-    protected override void OnInitialized()
+    // Quando a janela abre, ele vai no banco buscar o que tem na prateleira
+    protected override async Task OnInitializedAsync()
     {
-        var itens = Mochila.Equipamentos.ToList();
-        if (itens.Count == 4)
-        {
-            serialTablet = itens[0].NumeroSerie;
-            serialDws = itens[1].NumeroSerie;
-            serialRadio1 = itens[2].NumeroSerie;
-            serialRadio2 = itens[3].NumeroSerie;
-        }
+        // ATENÇÃO: As palavras aqui ("Tablet", "DWS", "Rádio") precisam ser parecidas
+        // com o Nome que você cadastrou lá na tela de Catálogo.
+        tabletsDisponiveis = await EstoqueService.ListarEquipamentosDisponiveisPorTipoAsync("Tablet");
+        dwsDisponiveis = await EstoqueService.ListarEquipamentosDisponiveisPorTipoAsync("DWS");
+        radiosDisponiveis = await EstoqueService.ListarEquipamentosDisponiveisPorTipoAsync("Rádio");
     }
 
-    private async Task SalvarKit()
+    private async Task Salvar()
     {
         try
         {
-            var seriais = new List<string> { serialTablet, serialDws, serialRadio1, serialRadio2 };
-            await EstoqueService.MontarKitNaMochilaAsync(Mochila.Id, seriais);
+            var seriais = new List<string> { serial1, serial2, serial3, serial4 }
+                .Where(s => !string.IsNullOrWhiteSpace(s))
+                .ToList();
 
-            Snackbar.Add("Kit montado e mochila pronta para uso!", Severity.Success);
+            await EstoqueService.MontarKitNaMochilaAsync(MochilaId, seriais);
+
+            Snackbar.Add("Kit montado com sucesso!", Severity.Success);
             MudDialog.Close(DialogResult.Ok(true));
         }
         catch (Exception ex)
         {
+            // O seu domínio DDD já protege se o cara tentar selecionar o MESMO rádio duas vezes!
             Snackbar.Add(ex.Message, Severity.Error);
         }
     }
 
-    private void Cancelar() => MudDialog.Cancel();
+    private void Cancelar()
+    {
+        MudDialog.Cancel();
+    }
 }

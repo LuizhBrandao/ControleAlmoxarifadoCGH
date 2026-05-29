@@ -10,13 +10,13 @@ public class Movimentacao
     public int Quantidade { get; set; }
     public string NomeAlmoxarife { get; set; } = string.Empty; // Quem operou o sistema
 
-    // Quem está retirando/devolvendo
+    // Quem está a levantar/devolver
     public int AgenteId { get; set; }
-    public Agente? Agente { get; set; }
+    public Agente Agente { get; set; } = null!;
 
-    // Qual item do catálogo está sendo movimentado (Obrigatório)
+    // Qual item do catálogo está a ser movimentado (Obrigatório)
     public int CatalogoId { get; set; }
-    public Catalogo? Catalogo { get; set; }
+    public Catalogo Catalogo { get; set; } = null!;
 
     // Qual equipamento físico (Opcional, preenchido apenas se NÃO for consumível)
     public int? EquipamentoId { get; set; }

@@ -1,0 +1,38 @@
+﻿@using AlmoxarifadoCGH.Web.Services
+@using MudBlazor
+@inject EstoqueService EstoqueService
+@inject ISnackbar Snackbar
+
+<MudDialog>
+    <DialogContent>
+        <MudNumericField @bind-Value="numeroMochila" Label="Número da Mochila" Variant="Variant.Outlined" Min="1" />
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="Cancelar">Cancelar</MudButton>
+        <MudButton Color="Color.Primary" Variant="Variant.Filled" OnClick="Salvar">Adicionar</MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter] IMudDialogInstance MudDialog { get; set; } = null!;
+    private int numeroMochila = 1;
+
+    private async Task Salvar()
+    {
+        try
+        {
+            await EstoqueService.AdicionarMochilaAsync(numeroMochila);
+            Snackbar.Add($"Mochila {numeroMochila} criada com sucesso!", Severity.Success);
+            MudDialog.Close(DialogResult.Ok(true));
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add(ex.Message, Severity.Error);
+        }
+    }
+
+    private void Cancelar()
+    {
+        MudDialog.Cancel();
+    }
+}

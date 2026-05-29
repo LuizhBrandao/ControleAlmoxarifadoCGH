@@ -56,17 +56,27 @@
                         </div>
 
                         <div class="col-md-1">
-                            <label class="form-label">@(itemJaExiste ? "Entrada" : "Qtd")</label>
-                            <InputNumber @bind-Value="model.EstoqueAtual" class="form-control" />
-                            @if (itemJaExiste)
+                            @if (model.IsConsumivel)
                             {
-                                <small class="text-muted">Atual: @estoqueNoBanco</small>
+                                <label class="form-label">@(itemJaExiste ? "Entrada" : "Qtd")</label>
+                                <InputNumber @bind-Value="model.EstoqueAtual" class="form-control" />
+                                @if (itemJaExiste)
+                                {
+                                    <small class="text-muted">Atual: @estoqueNoBanco</small>
+                                }
+                            }
+                            else
+                            {
+                                // Removemos os campos da tela e do modelo para equipamentos
                             }
                         </div>
 
                         <div class="col-md-1">
-                            <label class="form-label">Mínimo</label>
-                            <InputNumber @bind-Value="model.EstoqueMinimo" class="form-control" />
+                            @if (model.IsConsumivel)
+                            {
+                                <label class="form-label">Mínimo</label>
+                                <InputNumber @bind-Value="model.EstoqueMinimo" class="form-control" />
+                            }
                         </div>
 
                         <div class="col-md-2">

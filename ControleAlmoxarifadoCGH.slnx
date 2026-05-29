@@ -1,5 +1,6 @@
 <Solution>
   <Project Path="Almoxarifado.Domain/Almoxarifado.Domain.csproj" />
   <Project Path="Almoxarifado.Infrastructure/Almoxarifado.Infrastructure.csproj" />
+  <Project Path="Almoxarifado.Tests/Almoxarifado.Tests.csproj" />
   <Project Path="AlmoxarifadoCGH.Web/AlmoxarifadoCGH.Web.csproj" />
 </Solution>

@@ -20,9 +20,13 @@ public class EstoqueService
     // MÉTODOS DE DOMÍNIO: MOCHILAS (DDD)
     // =========================================================================
 
-    public async Task EntregarMochilaAsync(int mochilaId, string turno, string dupla)
+    public async Task EntregarMochilaAsync(int mochilaId, string turno, int agente1Id, int agente2Id)
     {
-        using var _context = await _factory.CreateDbContextAsync(); // Cria e destrói no momento exato
+        using var _context = await _factory.CreateDbContextAsync();
+
+        // 1. Validações Iniciais
+        if (agente1Id == 0 || agente2Id == 0) throw new InvalidOperationException("Você deve selecionar dois agentes para formar a dupla.");
+        if (agente1Id == agente2Id) throw new InvalidOperationException("Selecione dois agentes diferentes. O mesmo agente não pode fazer a dupla sozinho.");
 
         var mochila = await _context.Set<Mochila>()
             .Include(m => m.Equipamentos)
@@ -30,8 +34,32 @@ public class EstoqueService
 
         if (mochila == null) throw new InvalidOperationException("Mochila não encontrada no sistema.");
 
-        var operacao = new OperacaoTurno(turno, dupla);
+        // 2. Busca os agentes reais no banco de dados
+        var agente1 = await _context.Agentes.FindAsync(agente1Id);
+        var agente2 = await _context.Agentes.FindAsync(agente2Id);
+
+        if (agente1 == null || agente2 == null) throw new InvalidOperationException("Um ou mais agentes selecionados não existem no banco de dados.");
+
+        // 3. Monta o nome da dupla e aplica a regra do domínio
+        string nomeDupla = $"{agente1.Nome} e {agente2.Nome}";
+        var operacao = new OperacaoTurno(turno, nomeDupla);
         mochila.EntregarParaDupla(operacao);
+
+        // 4. GERA O HISTÓRICO COM A CHAVE ESTRANGEIRA PREENCHIDA
+        foreach (var eq in mochila.Equipamentos)
+        {
+            var mov = new Movimentacao
+            {
+                DataHora = DateTime.Now,
+                Tipo = TipoMovimentacao.Saida,
+                CatalogoId = eq.CatalogoId,
+                EquipamentoId = eq.Id,
+                Quantidade = 1,
+                AgenteId = agente1.Id, // <-- AQUI A MAGIA ACONTECE! O banco de dados fica feliz.
+                NomeAlmoxarife = $"Kit {mochila.Numero} - Dupla: {nomeDupla}"
+            };
+            _context.Movimentacoes.Add(mov);
+        }
 
         await _context.SaveChangesAsync();
     }
@@ -39,13 +67,33 @@ public class EstoqueService
     public async Task DevolverMochilaAsync(int mochilaId)
     {
         using var _context = await _factory.CreateDbContextAsync();
+
         var mochila = await _context.Set<Mochila>()
             .Include(m => m.Equipamentos)
             .FirstOrDefaultAsync(m => m.Id == mochilaId);
 
         if (mochila == null) throw new InvalidOperationException("Mochila não encontrada no sistema.");
 
+        // Guarda o nome da dupla antes de limpar a operação da mochila
+        var duplaQueDevolveu = mochila.OperacaoAtual?.Dupla ?? "Desconhecida";
+
         mochila.Devolver();
+
+        // GERA O HISTÓRICO DE DEVOLUÇÃO PARA CADA EQUIPAMENTO
+        foreach (var eq in mochila.Equipamentos)
+        {
+            var mov = new Movimentacao
+            {
+                DataHora = DateTime.Now,
+                Tipo = TipoMovimentacao.Entrada,
+                CatalogoId = eq.CatalogoId,
+                EquipamentoId = eq.Id,
+                Quantidade = 1,
+                NomeAlmoxarife = $"Kit {mochila.Numero} (Devolvido por {duplaQueDevolveu})"
+            };
+            _context.Movimentacoes.Add(mov);
+        }
+
         await _context.SaveChangesAsync();
     }
 
@@ -365,21 +413,88 @@ public class EstoqueService
         await _context.SaveChangesAsync();
     }
 
-    //public async Task GarantirMochilasIniciaisAsync()
-    //{
-    //    using var _context = await _factory.CreateDbContextAsync();
+    public async Task GarantirMochilasIniciaisAsync()
+    {
+        using var _context = await _factory.CreateDbContextAsync();
 
-    //    // Verifica se já existem mochilas
-    //    var jaExiste = await _context.Set<Mochila>().AnyAsync();
+        var jaExiste = await _context.Set<Mochila>().AnyAsync();
 
-    //    if (!jaExiste)
-    //    {
-    //        for (int i = 1; i <= 12; i++)
-    //        {
-    //            var mochila = new Mochila { Numero = i, Status = StatusMochila.Disponivel };
-    //            _context.Set<Mochila>().Add(mochila);
-    //        }
-    //        await _context.SaveChangesAsync();
-    //    }
-    //}
+        if (!jaExiste)
+        {
+            for (int i = 1; i <= 12; i++)
+            {
+                // Instanciando via Construtor DDD correto
+                var mochila = new Mochila(i);
+                _context.Set<Mochila>().Add(mochila);
+            }
+            await _context.SaveChangesAsync();
+        }
+    }
+
+    public async Task AdicionarMochilaAsync(int numero)
+    {
+        using var _context = await _factory.CreateDbContextAsync();
+
+        var existe = await _context.Set<Mochila>().AnyAsync(m => m.Numero == numero);
+        if (existe) throw new InvalidOperationException($"A Mochila número {numero} já está cadastrada.");
+
+        // Instanciando via Construtor DDD correto
+        var novaMochila = new Mochila(numero);
+
+        _context.Set<Mochila>().Add(novaMochila);
+        await _context.SaveChangesAsync();
+    }
+
+    public async Task AtualizarNumeroSerieEquipamentoAsync(int equipamentoId, string novoSerial)
+    {
+        using var _context = await _factory.CreateDbContextAsync();
+
+        // Verifica se o operador não digitou um serial que já existe em outro rádio/tablet
+        var serialExiste = await _context.Equipamentos
+            .AnyAsync(e => e.NumeroSerie.ToLower() == novoSerial.ToLower().Trim() && e.Id != equipamentoId);
+
+        if (serialExiste) throw new InvalidOperationException($"O patrimônio '{novoSerial}' já pertence a outro equipamento.");
+
+        var equipamento = await _context.Equipamentos.FindAsync(equipamentoId);
+        if (equipamento == null) throw new InvalidOperationException("Equipamento não encontrado.");
+
+        equipamento.NumeroSerie = novoSerial.Trim();
+        await _context.SaveChangesAsync();
+    }
+
+    public async Task ExcluirEquipamentoBlindadoAsync(int equipamentoId)
+    {
+        using var _context = await _factory.CreateDbContextAsync();
+
+        // A REGRA DE OURO: Verifica se já tem alguma movimentação no histórico
+        var temHistorico = await _context.Movimentacoes.AnyAsync(m => m.EquipamentoId == equipamentoId);
+
+        if (temHistorico)
+            throw new InvalidOperationException("Acesso Negado: Este equipamento já possui histórico de operações na pista. Para tirá-lo de circulação, altere o status dele para 'Manutenção' ou 'Extraviado'.");
+
+        var equipamento = await _context.Equipamentos.FindAsync(equipamentoId);
+        if (equipamento != null)
+        {
+            // Se passou na regra, exclui fisicamente e diminui o número total do catálogo
+            _context.Equipamentos.Remove(equipamento);
+
+            var catalogo = await _context.Catalogos.FindAsync(equipamento.CatalogoId);
+            if (catalogo != null && catalogo.EstoqueAtual > 0) catalogo.EstoqueAtual--;
+
+            await _context.SaveChangesAsync();
+        }
+
+    }
+    public async Task<List<Equipamento>> ListarEquipamentosDisponiveisPorTipoAsync(string tipo)
+    {
+        using var _context = await _factory.CreateDbContextAsync();
+
+        // Busca os equipamentos que estão disponíveis E cujo nome no catálogo contenha a palavra-chave
+        return await _context.Equipamentos
+            .Include(e => e.Catalogo)
+            .Where(e => e.Status == StatusEquipamento.Disponivel &&
+                        e.Catalogo.Nome.ToLower().Contains(tipo.ToLower()))
+            .OrderBy(e => e.NumeroSerie)
+            .ToListAsync();
+    }
 }

@@ -5,143 +5,171 @@
 @using AlmoxarifadoCGH.Web.Services
 @inject EstoqueService EstoqueService
 @inject NavigationManager Nav
+@inject IJSRuntime JS
 
-<div class="container mt-4">
-    <div class="card shadow">
-        <div class="card-header bg-dark text-white d-flex justify-content-between align-items-center">
-            <h3 class="mb-0">
-                <i class="bi bi-pc-display"></i> Patrimônios: @(catalogoPai?.Nome ?? "Carregando...")
-            </h3>
-            <button class="btn btn-outline-light btn-sm" @onclick="Voltar">Voltar ao Catálogo</button>
-        </div>
-        <div class="card-body">
-
-            @if (!string.IsNullOrEmpty(mensagemErro))
-            {
-                <div class="alert alert-danger">@mensagemErro</div>
-            }
-
-            <EditForm Model="novoEquipamento" OnValidSubmit="GravarNovoPatrimonio">
-                <div class="row g-3 mb-4 p-3 border rounded bg-light align-items-end">
-                    <div class="col-md-4">
-                        <label class="form-label fw-bold">Cadastrar Novo Número de Série</label>
-                        <InputText @bind-Value="novoEquipamento.NumeroSerie" class="form-control" placeholder="Digite o patrimônio" />
-                    </div>
-                    <div class="col-md-2">
-                        <button type="submit" class="btn btn-success w-100" disabled="@string.IsNullOrWhiteSpace(novoEquipamento.NumeroSerie)">
-                            <i class="bi bi-plus-circle"></i> Adicionar
-                        </button>
-                    </div>
-                </div>
-            </EditForm>
-
-            <table class="table table-hover mt-3">
-                <thead class="table-light">
-                    <tr>
-                        <th>Número de Série (Patrimônio)</th>
-                        <th>Status Atual</th>
-                        <th>Ações de Manutenção</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    @if (listaEquipamentos != null && listaEquipamentos.Any())
-                    {
-                        foreach (var eq in listaEquipamentos)
-                        {
-                            <tr>
-                                <td class="fw-bold align-middle">@eq.NumeroSerie</td>
-                                <td class="align-middle">
-                                    <span class="badge @ObterCorStatus(eq.Status)">@eq.Status</span>
-                                </td>
-                                <td>
-                                    <select class="form-select form-select-sm d-inline-block w-auto"
-                                            value="@eq.Status"
-                                            @onchange="@(e => MudarStatus(eq.Id, e.Value?.ToString()))"
-                                            disabled="@(eq.Status == StatusEquipamento.Emprestado)">
-                                        <option value="Disponivel">Disponível</option>
-                                        <option value="Emprestado" disabled>Emprestado</option>
-                                        <option value="Manutencao">Em Manutenção</option>
-                                        <option value="Extraviado">Extraviado</option>
-                                    </select>
-                                    @if (eq.Status == StatusEquipamento.Emprestado)
-                                    {
-                                        <small class="text-muted ms-2">Aguardando devolução para edição.</small>
-                                    }
-                                </td>
-                            </tr>
-                        }
-                    }
-                    else
-                    {
-                        <tr>
-                            <td colspan="3" class="text-center text-muted">Nenhum patrimônio físico registrado para este item.</td>
-                        </tr>
-                    }
-                </tbody>
-            </table>
-        </div>
+<MudContainer MaxWidth="MaxWidth.Large" Class="mt-6">
+    <div class="d-flex justify-space-between align-center mb-6">
+        <MudText Typo="Typo.h4">Patrimônios: @catalogoNome</MudText>
+        <MudButton Variant="Variant.Outlined" Color="Color.Default" OnClick='() => Nav.NavigateTo("/catalogo")'>
+            Voltar ao Catálogo
+        </MudButton>
     </div>
-</div>
+
+    <MudPaper Elevation="3" Class="pa-4 mb-6">
+        <MudGrid Class="align-end">
+            <MudItem xs="12" md="9">
+                <MudTextField @bind-Value="novoSerial" Label="Cadastrar Novo Número de Série" Variant="Variant.Outlined" Margin="Margin.Dense" />
+            </MudItem>
+            <MudItem xs="12" md="3">
+                <MudButton Variant="Variant.Filled" Color="Color.Success" FullWidth="true" OnClick="AdicionarPatrimonio">
+                    Adicionar
+                </MudButton>
+            </MudItem>
+        </MudGrid>
+    </MudPaper>
+
+    <MudTable Items="@equipamentos" Hover="true" Elevation="3">
+        <HeaderContent>
+            <MudTh>Número de Série (Patrimônio)</MudTh>
+            <MudTh>Status Atual</MudTh>
+            <MudTh>Ações de Manutenção</MudTh>
+        </HeaderContent>
+        <RowTemplate Context="eq">
+            <MudTd DataLabel="Número de Série">
+                @if (equipamentoEditandoId == eq.Id)
+                {
+                    <div class="d-flex align-center gap-2">
+                        <MudTextField @bind-Value="serialEmEdicao" Variant="Variant.Outlined" Margin="Margin.Dense" />
+                        <MudIconButton Icon="@Icons.Material.Filled.Check" Color="Color.Success" Size="Size.Small" OnClick="() => SalvarEdicao(eq.Id)" />
+                        <MudIconButton Icon="@Icons.Material.Filled.Close" Color="Color.Error" Size="Size.Small" OnClick="CancelarEdicao" />
+                    </div>
+                }
+                else
+                {
+                    <MudText Typo="Typo.body1"><b>@eq.NumeroSerie</b></MudText>
+                }
+            </MudTd>
+
+            <MudTd DataLabel="Status Atual">
+                <MudChip T="string" Color="@GetStatusColor(eq.Status)" Size="Size.Small">@eq.Status.ToString()</MudChip>
+            </MudTd>
+
+            <MudTd DataLabel="Ações de Manutenção">
+                <div class="d-flex gap-2 align-center">
+                    <MudSelect T="StatusEquipamento" Value="@eq.Status" ValueChanged="@((StatusEquipamento s) => MudarStatus(eq.Id, s))" Variant="Variant.Outlined" Margin="Margin.Dense" Dense="true" Style="width: 150px;">
+                        @foreach (var status in Enum.GetValues<StatusEquipamento>())
+                        {
+                            <MudSelectItem T="StatusEquipamento" Value="@status">@status.ToString()</MudSelectItem>
+                        }
+                    </MudSelect>
+
+                    <MudTooltip Text="Corrigir Digitação">
+                        <MudIconButton Icon="@Icons.Material.Filled.Edit" Color="Color.Primary" Size="Size.Small" OnClick="() => IniciarEdicao(eq)" />
+                    </MudTooltip>
+
+                    <MudTooltip Text="Excluir Definitivamente">
+                        <MudIconButton Icon="@Icons.Material.Filled.Delete" Color="Color.Error" Size="Size.Small" OnClick="() => ExcluirEquipamento(eq)" />
+                    </MudTooltip>
+                </div>
+            </MudTd>
+        </RowTemplate>
+    </MudTable>
+</MudContainer>
 
 @code {
-    [Parameter]
-    public int CatalogoId { get; set; }
+    [Parameter] public int CatalogoId { get; set; }
 
-    private Catalogo? catalogoPai;
-    private List<Equipamento> listaEquipamentos = new();
-    private Equipamento novoEquipamento = new();
-    private string mensagemErro = "";
+    private List<Equipamento> equipamentos = new();
+    private string catalogoNome = "";
+    private string novoSerial = "";
+
+    // Variáveis para controlar a edição em linha
+    private int equipamentoEditandoId = 0;
+    private string serialEmEdicao = "";
 
     protected override async Task OnInitializedAsync()
     {
-        catalogoPai = await EstoqueService.BuscarCatalogoPorIdAsync(CatalogoId);
-
-        if (catalogoPai == null)
-        {
-            Nav.NavigateTo("/catalogo");
-            return;
-        }
-
-        await CarregarEquipamentos();
+        await CarregarDados();
     }
 
-    private async Task CarregarEquipamentos()
+    private async Task CarregarDados()
     {
-        listaEquipamentos = await EstoqueService.ListarEquipamentosPorCatalogoAsync(CatalogoId);
-        novoEquipamento = new Equipamento { CatalogoId = CatalogoId, Status = StatusEquipamento.Disponivel };
+        var catalogo = await EstoqueService.BuscarCatalogoPorIdAsync(CatalogoId);
+        if (catalogo != null) catalogoNome = catalogo.Nome;
+
+        equipamentos = await EstoqueService.ListarEquipamentosPorCatalogoAsync(CatalogoId);
     }
 
-    private async Task GravarNovoPatrimonio()
+    private async Task AdicionarPatrimonio()
     {
-        mensagemErro = "";
+        if (string.IsNullOrWhiteSpace(novoSerial)) return;
         try
         {
+            var novoEquipamento = new Equipamento { CatalogoId = CatalogoId, NumeroSerie = novoSerial.Trim(), Status = StatusEquipamento.Disponivel };
             await EstoqueService.AdicionarEquipamentoAsync(novoEquipamento);
-            await CarregarEquipamentos();
+            novoSerial = "";
+            await CarregarDados();
         }
-        catch (Exception ex)
+        catch (Exception ex) { await JS.InvokeVoidAsync("alert", ex.Message); }
+    }
+
+    // O MudSelect agora envia diretamente o Enum, o que deixa o código mais limpo
+    private async Task MudarStatus(int equipamentoId, StatusEquipamento novoStatus)
+    {
+        await EstoqueService.AtualizarStatusEquipamentoAsync(equipamentoId, novoStatus);
+        await CarregarDados();
+    }
+
+    private void IniciarEdicao(Equipamento eq)
+    {
+        equipamentoEditandoId = eq.Id;
+        serialEmEdicao = eq.NumeroSerie;
+    }
+
+    private void CancelarEdicao()
+    {
+        equipamentoEditandoId = 0;
+        serialEmEdicao = "";
+    }
+
+    private async Task SalvarEdicao(int equipamentoId)
+    {
+        if (string.IsNullOrWhiteSpace(serialEmEdicao)) return;
+        try
         {
-            mensagemErro = ex.Message;
+            await EstoqueService.AtualizarNumeroSerieEquipamentoAsync(equipamentoId, serialEmEdicao);
+            CancelarEdicao();
+            await CarregarDados();
+        }
+        catch (Exception ex) { await JS.InvokeVoidAsync("alert", ex.Message); }
+    }
+
+    private async Task ExcluirEquipamento(Equipamento eq)
+    {
+        bool confirmacao = await JS.InvokeAsync<bool>("confirm", $"Tem certeza que deseja APAGAR o patrimônio '{eq.NumeroSerie}'?");
+        if (confirmacao)
+        {
+            try
+            {
+                await EstoqueService.ExcluirEquipamentoBlindadoAsync(eq.Id);
+                await CarregarDados();
+            }
+            catch (Exception ex)
+            {
+                await JS.InvokeVoidAsync("alert", ex.Message);
+            }
         }
     }
 
-    private async Task MudarStatus(int equipamentoId, string? novoStatusString)
+    // Método para mapear a cor do MudChip baseada no Status
+    private Color GetStatusColor(StatusEquipamento status)
     {
-        if (Enum.TryParse<StatusEquipamento>(novoStatusString, out var statusParsed))
+        return status switch
         {
-            await EstoqueService.AtualizarStatusEquipamentoAsync(equipamentoId, statusParsed);
-            await CarregarEquipamentos();
-        }
+            StatusEquipamento.Disponivel => Color.Success,
+            StatusEquipamento.Emprestado => Color.Warning,
+            StatusEquipamento.Manutencao => Color.Error,
+            _ => Color.Default
+        };
     }
-
-    private string ObterCorStatus(StatusEquipamento status) => status switch
-    {
-        StatusEquipamento.Disponivel => "bg-success",
-        StatusEquipamento.Emprestado => "bg-warning text-dark",
-        StatusEquipamento.Manutencao => "bg-danger",
-        StatusEquipamento.Extraviado => "bg-dark",
-        _ => "bg-secondary"
-    };
-
-    private void Voltar() => Nav.NavigateTo("/catalogo");
 }
