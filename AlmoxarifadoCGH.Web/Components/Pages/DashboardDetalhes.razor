@@ -1,0 +1,105 @@
+﻿@page "/dashboard/detalhes/{Filtro}"
+@rendermode InteractiveServer
+@using Almoxarifado.Domain.Entities
+@using AlmoxarifadoCGH.Web.Services
+@inject EstoqueService EstoqueService
+@inject NavigationManager Nav
+
+<div class="container mt-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h3><i class="bi bi-search"></i> @TituloPagina</h3>
+        <button class="btn btn-secondary" @onclick='() => Nav.NavigateTo("/")'>Voltar</button>
+    </div>
+
+    @if (Filtro == "estoque")
+    {
+        <table class="table table-hover shadow-sm bg-white rounded">
+            <thead class="table-danger">
+                <tr>
+                    <th>Item</th>
+                    <th>Estoque Atual</th>
+                    <th>Mínimo Exigido</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var item in itensBaixoEstoque)
+                {
+                    <tr>
+                        <td>@item.Nome</td>
+                        <td class="fw-bold text-danger">@item.EstoqueAtual</td>
+                        <td>@item.EstoqueMinimo</td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    }
+    else if (Filtro == "atrasos")
+    {
+        <table class="table table-hover shadow-sm bg-white rounded">
+            <thead class="table-warning">
+                <tr>
+                    <th>Equipamento (SN)</th>
+                    <th>Colaborador</th>
+                    <th>Saída em</th>
+                    <th>Tempo Decorrido</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var m in movimentacoes)
+                {
+                    <tr>
+                        <td>@m.Catalogo?.Nome (SN: @m.Equipamento?.NumeroSerie)</td>
+                        <td>@m.Agente?.Nome</td>
+                        <td>@m.DataHora.ToString("dd/MM HH:mm")</td>
+                        <td class="text-danger fw-bold">@((DateTime.Now - m.DataHora).TotalHours.ToString("F1"))h</td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    }
+    else if (Filtro == "turno")
+    {
+        <table class="table table-hover shadow-sm bg-white rounded">
+            <thead class="table-success">
+                <tr>
+                    <th>Hora</th>
+                    <th>Colaborador</th>
+                    <th>Item</th>
+                    <th>Almoxarife</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var m in movimentacoes)
+                {
+                    <tr>
+                        <td>@m.DataHora.ToString("HH:mm")</td>
+                        <td>@m.Agente?.Nome</td>
+                        <td>@m.Catalogo?.Nome @(m.Equipamento != null ? $"({m.Equipamento.NumeroSerie})" : "")</td>
+                        <td>@m.NomeAlmoxarife</td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    }
+</div>
+
+@code {
+    [Parameter] public string Filtro { get; set; } = "";
+    private string TituloPagina => Filtro switch
+    {
+        "estoque" => "Itens com Estoque Crítico",
+        "atrasos" => "Equipamentos com Devolução Pendente",
+        "turno" => "Movimentações das Últimas 12h",
+        _ => "Detalhes"
+    };
+
+    private List<Catalogo> itensBaixoEstoque = new();
+    private List<Movimentacao> movimentacoes = new();
+
+    protected override async Task OnParametersSetAsync()
+    {
+        if (Filtro == "estoque") itensBaixoEstoque = await EstoqueService.ListarItensEstoqueBaixoAsync();
+        else if (Filtro == "atrasos") movimentacoes = await EstoqueService.ListarEquipamentosAtrasadosAsync();
+        else if (Filtro == "turno") movimentacoes = await EstoqueService.ListarSaidasDoTurnoAsync();
+    }
+}

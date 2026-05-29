@@ -1,0 +1,273 @@
+﻿@page "/catalogo"
+@rendermode InteractiveServer
+@using Almoxarifado.Domain.Entities
+@using AlmoxarifadoCGH.Web.Services
+@inject EstoqueService EstoqueService
+@inject IJSRuntime JS
+@inject NavigationManager Nav
+
+<div class="container mt-4">
+    <div class="card shadow">
+        <div class="card-header bg-dark text-white d-flex justify-content-between">
+            <h3 class="mb-0"><i class="bi bi-list-check"></i> Catálogo de Materiais</h3>
+            <button class="btn btn-outline-light btn-sm" @onclick="NovoItem">Adicionar Item</button>
+        </div>
+        <div class="card-body">
+            @if (!string.IsNullOrEmpty(mensagemErro))
+            {
+                <div class="alert alert-danger">
+                    <i class="bi bi-exclamation-triangle"></i> @mensagemErro
+                </div>
+            }
+            @if (exibirFormulario)
+            {
+                <EditForm Model="model" OnValidSubmit="Guardar">
+                    <div class="row g-3 mb-4 p-3 border rounded bg-light">
+
+                        <div class="col-md-3">
+                            <label class="form-label">Nome do Item</label>
+                            <InputText @bind-Value="model.Nome" @bind-Value:after="VerificarSeExiste" class="form-control" placeholder="Ex: Bobina" required />
+
+                            @if (itemJaExiste)
+                            {
+                                <small class="text-warning fw-bold"><i class="bi bi-exclamation-circle"></i> A Qtd será somada.</small>
+                            }
+                        </div>
+
+                        <div class="col-md-2">
+                            <label class="form-label">Tipo</label>
+                            <InputSelect @bind-Value="model.IsConsumivel" class="form-select" disabled="@itemJaExiste">
+                                <option value="false">Equipamento</option>
+                                <option value="true">Consumível</option>
+                            </InputSelect>
+                        </div>
+
+                        <div class="col-md-3">
+                            @if (!model.IsConsumivel)
+                            {
+                                <label class="form-label fw-bold text-primary">Nº Patrimônio/Série</label>
+                                <InputText @bind-Value="model.Descricao" class="form-control border-primary" placeholder="Ex: CGH-001" />
+                            }
+                            else
+                            {
+                                <label class="form-label text-muted">Observação</label>
+                                <InputText @bind-Value="model.Descricao" class="form-control" placeholder="Ex: Caixa c/ 50" disabled="@itemJaExiste" />
+                            }
+                        </div>
+
+                        <div class="col-md-1">
+                            <label class="form-label">@(itemJaExiste ? "Entrada" : "Qtd")</label>
+                            <InputNumber @bind-Value="model.EstoqueAtual" class="form-control" />
+                            @if (itemJaExiste)
+                            {
+                                <small class="text-muted">Atual: @estoqueNoBanco</small>
+                            }
+                        </div>
+
+                        <div class="col-md-1">
+                            <label class="form-label">Mínimo</label>
+                            <InputNumber @bind-Value="model.EstoqueMinimo" class="form-control" />
+                        </div>
+
+                        <div class="col-md-2">
+                            <label class="form-label d-none d-md-block">&nbsp;</label>
+                            <BotaoAcao Tipo="submit" Cor="success" CssClass="w-100" Icone="bi-save" Texto="Gravar" />
+                        </div>
+                    </div>
+                </EditForm>
+            }
+
+            <table class="table table-hover mt-3">
+                <thead class="table-light">
+                    <tr>
+                        <th>Nome</th>
+                        <th>Tipo</th>
+                        <th>Detalhe (Patrimônio/Obs)</th>
+                        <th>Estoque</th>
+                        <th>Ações</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var item in listaItens)
+                    {
+                        <tr>
+                            <td class="fw-bold align-middle">@item.Nome</td>
+
+                            <td class="align-middle">
+                                @if (item.IsConsumivel)
+                                {
+                                    <span class="badge bg-secondary">Consumível</span>
+                                }
+                                else
+                                {
+                                    <span class="badge bg-primary">Equipamento</span>
+                                }
+                            </td>
+
+                            <td class="align-middle">
+                                @if (item.IsConsumivel)
+                                {
+                                    <span class="text-muted">@(string.IsNullOrEmpty(item.Descricao) ? "-" : item.Descricao)</span>
+                                }
+                                else
+                                {
+                                    <span class="text-muted">Múltiplos Patrimônios</span>
+                                }
+                            </td>
+
+                            <td class="align-middle">
+                                @if (item.IsConsumivel)
+                                {
+                                    @item.EstoqueAtual
+                                    @if (item.EstoqueAtual <= item.EstoqueMinimo)
+                                    {
+                                        <span class="badge bg-danger ms-2" title="Estoque Baixo!">!</span>
+                                    }
+                                }
+                                else
+                                {
+                                    <span class="fw-bold">@item.Equipamentos.Count</span>
+                                }
+                            </td>
+
+                            <td class="align-middle">
+                                @if (!item.IsConsumivel)
+                                {
+                                    <BotaoAcao Cor="outline-info" CssClass="btn-sm me-1" Icone="bi-list-ol" Texto="Patrimônios" OnClick="@(() => Nav.NavigateTo($"/catalogo/{item.Id}/patrimonios"))" />
+                                }
+                                <BotaoAcao Cor="outline-primary" CssClass="btn-sm" Icone="bi-pencil" Texto="Editar" OnClick="() => Editar(item)" />
+                                <BotaoAcao Cor="outline-danger" CssClass="btn-sm ms-1" Icone="bi-trash" Texto="Excluir" OnClick="() => Apagar(item)" />
+                            </td>
+                        </tr>
+                    }
+                    @if (!listaItens.Any())
+                    {
+                        <tr>
+                            <td colspan="5" class="text-center text-muted">Nenhum item cadastrado ainda.</td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+@code {
+    private List<Catalogo> listaItens = new();
+    private Catalogo model = new();
+    private bool exibirFormulario = false;
+
+    // Variáveis de controle para a checagem em tempo real
+    private bool itemJaExiste = false;
+    private int estoqueNoBanco = 0;
+    private bool modoEdicaoTabela = false;
+    private string mensagemErro = "";
+
+    protected override async Task OnInitializedAsync() => await CarregarDados();
+
+    private async Task CarregarDados() => listaItens = await EstoqueService.ListarCatalogoAsync();
+
+    private async Task Guardar()
+    {
+        mensagemErro = ""; // Limpa os erros anteriores
+        try
+        {
+            if (itemJaExiste && model.IsConsumivel)
+            {
+                model.EstoqueAtual += estoqueNoBanco;
+            }
+
+            if (!model.IsConsumivel && model.EstoqueAtual == 0)
+            {
+                model.EstoqueAtual = 1;
+            }
+
+            await EstoqueService.SalvarItemCatalogoAsync(model);
+            exibirFormulario = false;
+            await CarregarDados();
+        }
+        catch (Exception ex)
+        {
+            // Captura o erro do backend e mostra na tela
+            mensagemErro = ex.Message;
+        }
+    }
+
+    private async Task VerificarSeExiste()
+    {
+        if (modoEdicaoTabela || string.IsNullOrWhiteSpace(model.Nome))
+        {
+            itemJaExiste = false;
+            return;
+        }
+
+        var existente = await EstoqueService.BuscarItemPorNomeAsync(model.Nome);
+        if (existente != null)
+        {
+            itemJaExiste = true;
+            estoqueNoBanco = existente.EstoqueAtual;
+
+            model.Id = existente.Id;
+            model.IsConsumivel = existente.IsConsumivel;
+            model.EstoqueMinimo = existente.EstoqueMinimo;
+            model.EstoqueAtual = 0;
+
+            // Zera o campo se for equipamento para receber a leitura do novo rádio/celular
+            // Mantém o texto se for consumível (ex: "Caixa c/ 50")
+            model.Descricao = existente.IsConsumivel ? existente.Descricao : "";
+        }
+        else
+        {
+            itemJaExiste = false;
+            model.Id = 0;
+        }
+    }
+
+    private void Editar(Catalogo i)
+    {
+        mensagemErro = "";
+        model = i;
+        modoEdicaoTabela = true;
+        itemJaExiste = false;
+
+        // Limpa o patrimônio na edição genérica do catálogo para não tentar regravá-lo
+        if (!model.IsConsumivel)
+        {
+            model.Descricao = "";
+        }
+
+        exibirFormulario = true;
+    }
+
+    private void NovoItem()
+    {
+        mensagemErro = "";
+        model = new Catalogo();
+        itemJaExiste = false;
+        modoEdicaoTabela = false;
+        exibirFormulario = true;
+    }
+
+    private async Task Apagar(Catalogo item)
+    {
+        // 1. Pergunta pro usuário se ele tem certeza (Janela padrão do navegador)
+        bool confirmacao = await JS.InvokeAsync<bool>("confirm", $"Tem certeza que deseja apagar '{item.Nome}'?");
+
+        if (confirmacao)
+        {
+            // 2. Chama o serviço para deletar
+            bool sucesso = await EstoqueService.ExcluirItemCatalogoAsync(item.Id);
+
+            if (sucesso)
+            {
+                await CarregarDados(); // Recarrega a tabela na hora
+            }
+            else
+            {
+                // 3. Se deu erro (DbUpdateException), avisa o usuário
+                await JS.InvokeVoidAsync("alert", "Não foi possível apagar! Este item já possui registros de saída no histórico.");
+            }
+        }
+    }
+
+}

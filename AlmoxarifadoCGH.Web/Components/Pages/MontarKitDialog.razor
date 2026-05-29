@@ -1,0 +1,67 @@
+﻿@using Almoxarifado.Domain.Entities
+@using Almoxarifado.Domain.ValueObjects
+@using AlmoxarifadoCGH.Web.Services
+@using MudBlazor
+@inject EstoqueService EstoqueService
+@inject ISnackbar Snackbar
+
+<MudDialog>
+    <DialogContent>
+        <MudText Typo="Typo.body2" Class="mb-4">Digite os números de série (patrimônio) dos equipamentos para a Mochila @Mochila.Numero.</MudText>
+
+        <MudTextField @bind-Value="serialTablet" Label="1 Tablet" Variant="Variant.Outlined" Class="mb-3" Autofocus="true" />
+        <MudTextField @bind-Value="serialDws" Label="1 DWS" Variant="Variant.Outlined" Class="mb-3" />
+        <MudTextField @bind-Value="serialRadio1" Label="Rádio 1" Variant="Variant.Outlined" Class="mb-3" />
+        <MudTextField @bind-Value="serialRadio2" Label="Rádio 2" Variant="Variant.Outlined" Class="mb-3" />
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="Cancelar">Cancelar</MudButton>
+        <MudButton Color="Color.Success" Variant="Variant.Filled" OnClick="SalvarKit" Disabled="!PodeSalvar">Salvar Kit</MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter] public IMudDialogInstance MudDialog { get; set; } = null!;
+
+    [Parameter] public Mochila Mochila { get; set; } = null!;
+
+    private string serialTablet = "";
+    private string serialDws = "";
+    private string serialRadio1 = "";
+    private string serialRadio2 = "";
+
+    private bool PodeSalvar => !string.IsNullOrWhiteSpace(serialTablet) &&
+                               !string.IsNullOrWhiteSpace(serialDws) &&
+                               !string.IsNullOrWhiteSpace(serialRadio1) &&
+                               !string.IsNullOrWhiteSpace(serialRadio2);
+
+    protected override void OnInitialized()
+    {
+        var itens = Mochila.Equipamentos.ToList();
+        if (itens.Count == 4)
+        {
+            serialTablet = itens[0].NumeroSerie;
+            serialDws = itens[1].NumeroSerie;
+            serialRadio1 = itens[2].NumeroSerie;
+            serialRadio2 = itens[3].NumeroSerie;
+        }
+    }
+
+    private async Task SalvarKit()
+    {
+        try
+        {
+            var seriais = new List<string> { serialTablet, serialDws, serialRadio1, serialRadio2 };
+            await EstoqueService.MontarKitNaMochilaAsync(Mochila.Id, seriais);
+
+            Snackbar.Add("Kit montado e mochila pronta para uso!", Severity.Success);
+            MudDialog.Close(DialogResult.Ok(true));
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add(ex.Message, Severity.Error);
+        }
+    }
+
+    private void Cancelar() => MudDialog.Cancel();
+}

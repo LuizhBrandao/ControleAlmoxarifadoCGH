@@ -1,0 +1,84 @@
+﻿@page "/gestao-mochilas"
+@rendermode InteractiveServer
+@using Almoxarifado.Domain.Entities
+@using Almoxarifado.Domain.Enums
+@using Almoxarifado.Domain.ValueObjects
+@using AlmoxarifadoCGH.Web.Services
+@using MudBlazor
+@inject EstoqueService EstoqueService
+@inject IDialogService DialogService
+@inject ISnackbar Snackbar
+
+<MudContainer MaxWidth="MaxWidth.Large" Class="mt-6">
+    <MudText Typo="Typo.h4" Class="mb-6">Gestão de Mochilas (Kits)</MudText>
+
+    <MudTable Items="@todasMochilas" Hover="true" Elevation="2">
+        <HeaderContent>
+            <MudTh>Número</MudTh>
+            <MudTh>Status</MudTh>
+            <MudTh>Operação Atual</MudTh>
+            <MudTh>Ações</MudTh>
+        </HeaderContent>
+        <RowTemplate Context="mochila">
+            <MudTd DataLabel="Número">Mochila @mochila.Numero</MudTd>
+            <MudTd DataLabel="Status">
+                @if (mochila.Status == StatusMochila.Disponivel)
+                {
+                    <MudChip T="string" Color="Color.Success">Pronta (Disponível)</MudChip>
+                }
+                else if (mochila.Status == StatusMochila.EmUso)
+                {
+                    <MudChip T="string" Color="Color.Warning">Em Uso</MudChip>
+                }
+                else
+                {
+                    <MudChip T="string" Color="Color.Error">Manutenção / Incompleta</MudChip>
+                }
+            </MudTd>
+            <MudTd DataLabel="Operação Atual">
+                @(mochila.OperacaoAtual != null ? $"{mochila.OperacaoAtual.Turno} - {mochila.OperacaoAtual.Dupla}" : "Nenhuma")
+            </MudTd>
+            <MudTd DataLabel="Ações">
+                <MudButton Variant="Variant.Outlined" Color="Color.Primary" Size="Size.Small" OnClick="@(() => AbrirDialogoMontagem(mochila))">
+                    @(mochila.Status == StatusMochila.Disponivel ? "Ver/Editar Kit" : "Montar Kit")
+                </MudButton>
+            </MudTd>
+        </RowTemplate>
+    </MudTable>
+</MudContainer>
+
+@code {
+    private List<Mochila> todasMochilas = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        // 1. Garante que as 12 existem
+        //await EstoqueService.GarantirMochilasIniciaisAsync();
+
+        // 2. Carrega para a tela
+        await CarregarDados();
+    }
+
+    private async Task CarregarDados()
+    {
+        todasMochilas = await EstoqueService.ListarTodasMochilasAsync();
+    }
+
+    private async Task AbrirDialogoMontagem(Mochila mochila)
+    {
+        if (mochila.Status == StatusMochila.EmUso)
+        {
+            Snackbar.Add("Não é possível alterar os itens de uma mochila que está em uso no turno.", Severity.Warning);
+            return;
+        }
+
+        var parameters = new DialogParameters { ["Mochila"] = mochila };
+        var dialog = await DialogService.ShowAsync<MontarKitDialog>($"Montar Kit - Mochila {mochila.Numero}", parameters);
+        var result = await dialog.Result;
+
+        if (result != null && !result.Canceled)
+        {
+            await CarregarDados();
+        }
+    }
+}

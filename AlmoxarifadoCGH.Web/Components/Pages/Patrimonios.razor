@@ -1,0 +1,147 @@
+﻿@page "/catalogo/{CatalogoId:int}/patrimonios"
+@rendermode InteractiveServer
+@using Almoxarifado.Domain.Entities
+@using Almoxarifado.Domain.Enums
+@using AlmoxarifadoCGH.Web.Services
+@inject EstoqueService EstoqueService
+@inject NavigationManager Nav
+
+<div class="container mt-4">
+    <div class="card shadow">
+        <div class="card-header bg-dark text-white d-flex justify-content-between align-items-center">
+            <h3 class="mb-0">
+                <i class="bi bi-pc-display"></i> Patrimônios: @(catalogoPai?.Nome ?? "Carregando...")
+            </h3>
+            <button class="btn btn-outline-light btn-sm" @onclick="Voltar">Voltar ao Catálogo</button>
+        </div>
+        <div class="card-body">
+
+            @if (!string.IsNullOrEmpty(mensagemErro))
+            {
+                <div class="alert alert-danger">@mensagemErro</div>
+            }
+
+            <EditForm Model="novoEquipamento" OnValidSubmit="GravarNovoPatrimonio">
+                <div class="row g-3 mb-4 p-3 border rounded bg-light align-items-end">
+                    <div class="col-md-4">
+                        <label class="form-label fw-bold">Cadastrar Novo Número de Série</label>
+                        <InputText @bind-Value="novoEquipamento.NumeroSerie" class="form-control" placeholder="Digite o patrimônio" />
+                    </div>
+                    <div class="col-md-2">
+                        <button type="submit" class="btn btn-success w-100" disabled="@string.IsNullOrWhiteSpace(novoEquipamento.NumeroSerie)">
+                            <i class="bi bi-plus-circle"></i> Adicionar
+                        </button>
+                    </div>
+                </div>
+            </EditForm>
+
+            <table class="table table-hover mt-3">
+                <thead class="table-light">
+                    <tr>
+                        <th>Número de Série (Patrimônio)</th>
+                        <th>Status Atual</th>
+                        <th>Ações de Manutenção</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @if (listaEquipamentos != null && listaEquipamentos.Any())
+                    {
+                        foreach (var eq in listaEquipamentos)
+                        {
+                            <tr>
+                                <td class="fw-bold align-middle">@eq.NumeroSerie</td>
+                                <td class="align-middle">
+                                    <span class="badge @ObterCorStatus(eq.Status)">@eq.Status</span>
+                                </td>
+                                <td>
+                                    <select class="form-select form-select-sm d-inline-block w-auto"
+                                            value="@eq.Status"
+                                            @onchange="@(e => MudarStatus(eq.Id, e.Value?.ToString()))"
+                                            disabled="@(eq.Status == StatusEquipamento.Emprestado)">
+                                        <option value="Disponivel">Disponível</option>
+                                        <option value="Emprestado" disabled>Emprestado</option>
+                                        <option value="Manutencao">Em Manutenção</option>
+                                        <option value="Extraviado">Extraviado</option>
+                                    </select>
+                                    @if (eq.Status == StatusEquipamento.Emprestado)
+                                    {
+                                        <small class="text-muted ms-2">Aguardando devolução para edição.</small>
+                                    }
+                                </td>
+                            </tr>
+                        }
+                    }
+                    else
+                    {
+                        <tr>
+                            <td colspan="3" class="text-center text-muted">Nenhum patrimônio físico registrado para este item.</td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+@code {
+    [Parameter]
+    public int CatalogoId { get; set; }
+
+    private Catalogo? catalogoPai;
+    private List<Equipamento> listaEquipamentos = new();
+    private Equipamento novoEquipamento = new();
+    private string mensagemErro = "";
+
+    protected override async Task OnInitializedAsync()
+    {
+        catalogoPai = await EstoqueService.BuscarCatalogoPorIdAsync(CatalogoId);
+
+        if (catalogoPai == null)
+        {
+            Nav.NavigateTo("/catalogo");
+            return;
+        }
+
+        await CarregarEquipamentos();
+    }
+
+    private async Task CarregarEquipamentos()
+    {
+        listaEquipamentos = await EstoqueService.ListarEquipamentosPorCatalogoAsync(CatalogoId);
+        novoEquipamento = new Equipamento { CatalogoId = CatalogoId, Status = StatusEquipamento.Disponivel };
+    }
+
+    private async Task GravarNovoPatrimonio()
+    {
+        mensagemErro = "";
+        try
+        {
+            await EstoqueService.AdicionarEquipamentoAsync(novoEquipamento);
+            await CarregarEquipamentos();
+        }
+        catch (Exception ex)
+        {
+            mensagemErro = ex.Message;
+        }
+    }
+
+    private async Task MudarStatus(int equipamentoId, string? novoStatusString)
+    {
+        if (Enum.TryParse<StatusEquipamento>(novoStatusString, out var statusParsed))
+        {
+            await EstoqueService.AtualizarStatusEquipamentoAsync(equipamentoId, statusParsed);
+            await CarregarEquipamentos();
+        }
+    }
+
+    private string ObterCorStatus(StatusEquipamento status) => status switch
+    {
+        StatusEquipamento.Disponivel => "bg-success",
+        StatusEquipamento.Emprestado => "bg-warning text-dark",
+        StatusEquipamento.Manutencao => "bg-danger",
+        StatusEquipamento.Extraviado => "bg-dark",
+        _ => "bg-secondary"
+    };
+
+    private void Voltar() => Nav.NavigateTo("/catalogo");
+}

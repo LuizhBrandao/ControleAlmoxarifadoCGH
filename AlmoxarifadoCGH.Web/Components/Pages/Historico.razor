@@ -1,0 +1,66 @@
+﻿@page "/historico"
+@rendermode InteractiveServer
+@using Almoxarifado.Domain.Entities
+@using AlmoxarifadoCGH.Web.Services
+@inject EstoqueService EstoqueService
+
+<div class="container mt-4">
+    <div class="card shadow">
+        <div class="card-header bg-dark text-white">
+            <h3 class="mb-0"><i class="bi bi-clock-history"></i> Histórico de Movimentações</h3>
+        </div>
+        <div class="card-body">
+            <table class="table table-striped table-hover">
+                <thead class="table-secondary">
+                    <tr>
+                        <th>Data/Hora</th>
+                        <th>Tipo</th>
+                        <th>Agente</th>
+                        <th>Item</th>
+                        <th>Detalhe/Série</th>
+                        <th>Qtd.</th>
+                        <th>Responsável</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @if (listaMovimentacoes == null || !listaMovimentacoes.Any())
+                    {
+                        <tr>
+                            <td colspan="7" class="text-center text-muted">Nenhum registro encontrado.</td>
+                        </tr>
+                    }
+                    else
+                    {
+                        foreach (var m in listaMovimentacoes)
+                        {
+                            <tr>
+                                <td>@m.DataHora.ToString("dd/MM/yyyy HH:mm")</td>
+                                <td>
+                                    <span class="badge @(m.Tipo == Almoxarifado.Domain.Enums.TipoMovimentacao.Saida ? "bg-warning text-dark" : "bg-info")">
+                                        @m.Tipo
+                                    </span>
+                                </td>
+                                <td>@m.Agente?.Nome</td>
+                                <td>@m.Catalogo?.Nome</td>
+                                <td>
+                                    @(m.Equipamento != null ? $"SN: {m.Equipamento.NumeroSerie}" : "Consumo")
+                                </td>
+                                <td>@m.Quantidade</td>
+                                <td>@m.NomeAlmoxarife</td>
+                            </tr>
+                        }
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+@code {
+    private List<Movimentacao> listaMovimentacoes = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        listaMovimentacoes = await EstoqueService.ListarHistoricoAsync();
+    }
+}

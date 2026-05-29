@@ -1,0 +1,46 @@
+﻿<div class="top-row ps-3 navbar navbar-dark">
+    <div class="container-fluid">
+        <a class="navbar-brand" href="">AlmoxarifadoCGH</a>
+    </div>
+</div>
+
+<input type="checkbox" title="Navigation menu" class="navbar-toggler" />
+
+<div class="nav-scrollable" onclick="document.querySelector('.navbar-toggler').click()">
+    <nav class="nav flex-column">
+        <div class="nav-item px-3">
+            <NavLink class="nav-link" href="" Match="NavLinkMatch.All">
+                <span class="bi bi-house-door-fill-nav-menu" aria-hidden="true"></span> Dashboard
+            </NavLink>
+        </div>
+
+        <div class="nav-item px-3">
+            <NavLink class="nav-link" href="balcao">
+                <span class="bi bi-lightning-charge-fill" aria-hidden="true" style="margin-right: 10px;"></span> Balcão (Operação)
+            </NavLink>
+        </div>
+
+        <div class="nav-item px-3">
+            <NavLink class="nav-link" href="gestao-mochilas">
+                <span class="bi bi-backpack-fill" aria-hidden="true" style="margin-right: 10px;"></span> Gestão de Mochilas
+            </NavLink>
+        </div>
+        <hr class="text-white" />
+
+        <div class="nav-item px-3">
+            <NavLink class="nav-link" href="agentes">
+                <span class="bi bi-people" aria-hidden="true"></span> Agentes
+            </NavLink>
+        </div>
+        <div class="nav-item px-3">
+            <NavLink class="nav-link" href="catalogo">
+                <span class="bi bi-list-check" aria-hidden="true"></span> Catálogo
+            </NavLink>
+        </div>
+        <div class="nav-item px-3">
+            <NavLink class="nav-link" href="historico">
+                <span class="bi bi-clock-history" aria-hidden="true"></span> Histórico
+            </NavLink>
+        </div>
+    </nav>
+</div>

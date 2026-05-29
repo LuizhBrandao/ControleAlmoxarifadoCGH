@@ -1,0 +1,72 @@
+﻿@page "/"
+@rendermode InteractiveServer
+@using AlmoxarifadoCGH.Web.Services
+@inject EstoqueService EstoqueService
+@inject NavigationManager Nav
+
+<div class="container mt-4">
+    <h2 class="mb-4"><i class="bi bi-speedometer2"></i> Painel de Controle</h2>
+
+    <div class="row g-4">
+        <div class="col-md-4" @onclick='() => Nav.NavigateTo("/dashboard/detalhes/estoque")' style="cursor: pointer;">
+            <div class="card shadow border-0 border-start border-danger border-5 h-100">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <h6 class="text-muted fw-bold text-uppercase mb-1">Estoque Baixo</h6>
+                            <h2 class="mb-0 text-dark fw-bold">@qtdEstoqueBaixo</h2>
+                        </div>
+                        <div class="bg-danger text-white rounded-circle d-flex align-items-center justify-content-center" style="width: 50px; height: 50px;">
+                            <i class="bi bi-exclamation-triangle fs-4"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-4" @onclick='() => Nav.NavigateTo("/dashboard/detalhes/atrasos")' style="cursor: pointer;">
+            <div class="card shadow border-0 border-start border-warning border-5 h-100">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <h6 class="text-muted fw-bold text-uppercase mb-1">Atrasos (> 12h)</h6>
+                            <h2 class="mb-0 text-dark fw-bold">@qtdAtrasados</h2>
+                        </div>
+                        <div class="bg-warning text-dark rounded-circle d-flex align-items-center justify-content-center" style="width: 50px; height: 50px;">
+                            <i class="bi bi-clock-history fs-4"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-4" @onclick='() => Nav.NavigateTo("/dashboard/detalhes/turno")' style="cursor: pointer;">
+            <div class="card shadow border-0 border-start border-success border-5 h-100">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <h6 class="text-muted fw-bold text-uppercase mb-1">Saídas no Turno</h6>
+                            <h2 class="mb-0 text-dark fw-bold">@qtdSaidasTurno</h2>
+                        </div>
+                        <div class="bg-success text-white rounded-circle d-flex align-items-center justify-content-center" style="width: 50px; height: 50px;">
+                            <i class="bi bi-box-arrow-right fs-4"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@code {
+    private int qtdEstoqueBaixo;
+    private int qtdAtrasados;
+    private int qtdSaidasTurno;
+
+    protected override async Task OnInitializedAsync()
+    {
+        qtdEstoqueBaixo = await EstoqueService.ContarItensEstoqueBaixoAsync();
+        qtdAtrasados = await EstoqueService.ContarEquipamentosAtrasadosAsync();
+        qtdSaidasTurno = await EstoqueService.ContarSaidasDoTurnoAsync();
+    }
+}

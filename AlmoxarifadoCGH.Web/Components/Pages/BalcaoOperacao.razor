@@ -1,0 +1,125 @@
+﻿@page "/balcao"
+@rendermode InteractiveServer
+@using Almoxarifado.Domain.Entities
+@using AlmoxarifadoCGH.Web.Services
+@using Almoxarifado.Domain.ValueObjects
+@inject EstoqueService EstoqueService
+@inject ISnackbar Snackbar
+
+<MudContainer MaxWidth="MaxWidth.ExtraLarge" Class="mt-6">
+    <MudText Typo="Typo.h4" Class="mb-6 fw-bold">Balcão de Operação</MudText>
+
+    <MudGrid>
+        <MudItem xs="12" md="6">
+            <MudCard Elevation="4" Class="pa-4 border-l-4 border-solid border-success">
+                <MudCardHeader>
+                    <MudText Typo="Typo.h5" Color="Color.Success" Class="fw-bold"><MudIcon Icon="@Icons.Material.Filled.Output" /> REGISTRAR SAÍDA</MudText>
+                </MudCardHeader>
+                <MudCardContent>
+                    <MudSelect T="string" @bind-Value="turnoSelecionado" Label="Selecione o Turno" Variant="Variant.Outlined" Class="mb-4">
+                        <MudSelectItem Value="@("T1")">Turno 1 (T1)</MudSelectItem>
+                        <MudSelectItem Value="@("T2")">Turno 2 (T2)</MudSelectItem>
+                        <MudSelectItem Value="@("T3")">Turno 3 (T3)</MudSelectItem>
+                    </MudSelect>
+
+                    <MudTextField @bind-Value="nomeDupla" Label="Nome da Dupla (Agentes)" Variant="Variant.Outlined" Class="mb-4" />
+
+                    <MudSelect T="int" @bind-Value="mochilaSelecionadaId" Label="Mochila Pronta (1 a 12)" Variant="Variant.Outlined" Class="mb-6">
+                        @foreach (var m in mochilasDisponiveis)
+                        {
+                            <MudSelectItem Value="@m.Id">Mochila @m.Numero</MudSelectItem>
+                        }
+                    </MudSelect>
+
+                    <MudButton OnClick="EntregarMochila" Variant="Variant.Filled" Color="Color.Success" Size="Size.Large" FullWidth="true" Disabled="!PodeEntregar">
+                        CONFIRMAR ENTREGA
+                    </MudButton>
+                </MudCardContent>
+            </MudCard>
+        </MudItem>
+
+        <MudItem xs="12" md="6">
+            <MudCard Elevation="4" Class="pa-4 border-l-4 border-solid border-info">
+                <MudCardHeader>
+                    <MudText Typo="Typo.h5" Color="Color.Info" Class="fw-bold"><MudIcon Icon="@Icons.Material.Filled.Input" /> REGISTRAR DEVOLUÇÃO</MudText>
+                </MudCardHeader>
+                <MudCardContent>
+                    <MudSelect T="int" @bind-Value="mochilaDevolucaoId" Label="Mochilas em Uso" Variant="Variant.Outlined" Class="mb-6">
+                        @foreach (var m in mochilasEmUso)
+                        {
+                            <MudSelectItem Value="@m.Id">Mochila @m.Numero (Turno: @m.OperacaoAtual?.Turno - @m.OperacaoAtual?.Dupla)</MudSelectItem>
+                        }
+                    </MudSelect>
+
+                    <MudButton OnClick="DevolverMochila" Variant="Variant.Filled" Color="Color.Info" Size="Size.Large" FullWidth="true" Disabled="mochilaDevolucaoId == 0">
+                        RECEBER MOCHILA
+                    </MudButton>
+                </MudCardContent>
+            </MudCard>
+        </MudItem>
+    </MudGrid>
+</MudContainer>
+
+@code {
+    // Variáveis de Controle
+    private string turnoSelecionado = "";
+    private string nomeDupla = "";
+    private int mochilaSelecionadaId;
+    private int mochilaDevolucaoId;
+
+    // Listas para a Interface
+    private List<Mochila> mochilasDisponiveis = new();
+    private List<Mochila> mochilasEmUso = new();
+
+    private bool PodeEntregar => !string.IsNullOrWhiteSpace(turnoSelecionado) && !string.IsNullOrWhiteSpace(nomeDupla) && mochilaSelecionadaId != 0;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await CarregarMochilas();
+    }
+
+    private async Task CarregarMochilas()
+    {
+        // Busca apenas as prontas para o painel de SAÍDA
+        mochilasDisponiveis = await EstoqueService.ListarMochilasPorStatusAsync(StatusMochila.Disponivel);
+
+        // Busca apenas as que estão na rua para o painel de DEVOLUÇÃO
+        mochilasEmUso = await EstoqueService.ListarMochilasPorStatusAsync(StatusMochila.EmUso);
+    }
+
+    private async Task EntregarMochila()
+    {
+        try
+        {
+            await EstoqueService.EntregarMochilaAsync(mochilaSelecionadaId, turnoSelecionado, nomeDupla);
+            Snackbar.Add("Mochila entregue com sucesso!", Severity.Success);
+
+            // Limpa o formulário
+            turnoSelecionado = "";
+            nomeDupla = "";
+            mochilaSelecionadaId = 0;
+
+            await CarregarMochilas();
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add(ex.Message, Severity.Error);
+        }
+    }
+
+    private async Task DevolverMochila()
+    {
+        try
+        {
+            await EstoqueService.DevolverMochilaAsync(mochilaDevolucaoId);
+            Snackbar.Add("Mochila recebida e itens enviados para recarga!", Severity.Info);
+
+            mochilaDevolucaoId = 0;
+            await CarregarMochilas();
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add(ex.Message, Severity.Error);
+        }
+    }
+}

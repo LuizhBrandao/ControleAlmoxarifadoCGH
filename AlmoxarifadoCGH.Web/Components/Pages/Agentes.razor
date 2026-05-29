@@ -1,0 +1,81 @@
+﻿@page "/agentes"
+@rendermode InteractiveServer
+@using Almoxarifado.Domain.Entities
+@using AlmoxarifadoCGH.Web.Services
+@inject EstoqueService EstoqueService
+
+<div class="container mt-4">
+    <div class="card shadow">
+        <div class="card-header bg-primary text-white d-flex justify-content-between">
+            <h3 class="mb-0">Cadastro de Agentes</h3>
+            <button class="btn btn-light btn-sm" @onclick="NovoAgente">Novo Agente</button>
+        </div>
+        <div class="card-body">
+            @if (exibirFormulario)
+            {
+                <EditForm Model="model" OnValidSubmit="Guardar">
+                    <div class="row g-3 mb-4 p-3 border rounded bg-light">
+                        <div class="col-md-6">
+                            <label class="form-label">Nome Completo</label>
+                            <InputText @bind-Value="model.Nome" class="form-control" placeholder="Ex: João Silva" />
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label">Matrícula/ID</label>
+                            <InputText @bind-Value="model.Matricula" class="form-control" placeholder="Ex: CGH-123" />
+                        </div>
+                        <div class="col-md-2 d-flex align-items-end">
+                            <button type="submit" class="btn btn-success w-100">Salvar</button>
+                        </div>
+                    </div>
+                </EditForm>
+            }
+
+            <table class="table table-hover">
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>Nome</th>
+                        <th>Matrícula</th>
+                        <th>Status</th>
+                        <th>Ações</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var agente in listaAgentes)
+                    {
+                        <tr>
+                            <td>@agente.Id</td>
+                            <td>@agente.Nome</td>
+                            <td>@agente.Matricula</td>
+                            <td><span class="badge @(agente.Ativo ? "bg-success" : "bg-danger")">@(agente.Ativo ? "Ativo" : "Inativo")</span></td>
+                            <td>
+                                <button class="btn btn-sm btn-outline-primary" @onclick="() => Editar(agente)">Editar</button>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+@code {
+    private List<Agente> listaAgentes = new();
+    private Agente model = new();
+    private bool exibirFormulario = false;
+
+    protected override async Task OnInitializedAsync() => await CarregarDados();
+
+    private async Task CarregarDados() => listaAgentes = await EstoqueService.ListarAgentesAsync();
+
+    private void NovoAgente() { model = new Agente(); exibirFormulario = true; }
+
+    private void Editar(Agente a) { model = a; exibirFormulario = true; }
+
+    private async Task Guardar()
+    {
+        await EstoqueService.SalvarAgenteAsync(model);
+        exibirFormulario = false;
+        await CarregarDados();
+    }
+}

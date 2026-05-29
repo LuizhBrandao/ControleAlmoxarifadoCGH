@@ -1,0 +1,33 @@
+﻿<button type="@Tipo" class="btn btn-@Cor @CssClass fw-bold text-nowrap" @onclick="OnClick" disabled="@Desabilitado">
+    @if (!string.IsNullOrWhiteSpace(Icone))
+    {
+        <i class="bi @Icone"></i>
+    }
+    @if (!string.IsNullOrWhiteSpace(Texto))
+    {
+        <span class="@(string.IsNullOrWhiteSpace(Icone) ? "" : "ms-1")">@Texto</span>
+    }
+</button>
+
+@code {
+    // Texto que vai aparecer no botão (opcional)
+    [Parameter] public string Texto { get; set; } = "";
+
+    // Classe do ícone do Bootstrap (ex: bi-save, bi-trash) (opcional)
+    [Parameter] public string Icone { get; set; } = "";
+
+    // Cor padrão do Bootstrap (primary, success, danger, outline-primary...)
+    [Parameter] public string Cor { get; set; } = "primary";
+
+    // Se é um botão comum ("button") ou de formulário ("submit")
+    [Parameter] public string Tipo { get; set; } = "button";
+
+    // Classes extras de CSS (ex: w-100, btn-sm, ms-2)
+    [Parameter] public string CssClass { get; set; } = "";
+
+    // Controle de bloqueio
+    [Parameter] public bool Desabilitado { get; set; } = false;
+
+    // O método que será disparado ao clicar
+    [Parameter] public EventCallback<Microsoft.AspNetCore.Components.Web.MouseEventArgs> OnClick { get; set; }
+}
