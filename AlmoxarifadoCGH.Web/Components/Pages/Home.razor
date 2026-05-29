@@ -4,59 +4,62 @@
 @inject EstoqueService EstoqueService
 @inject NavigationManager Nav
 
-<div class="container mt-4">
-    <h2 class="mb-4"><i class="bi bi-speedometer2"></i> Painel de Controle</h2>
+<MudContainer MaxWidth="MaxWidth.Large" Class="mt-6">
+    <MudText Typo="Typo.h4" Class="mb-6">
+        <MudIcon Icon="@Icons.Material.Filled.Speed" Size="Size.Large" Class="mr-2 mb-n1" />
+        Painel de Operações
+    </MudText>
 
-    <div class="row g-4">
-        <div class="col-md-4" @onclick='() => Nav.NavigateTo("/dashboard/detalhes/estoque")' style="cursor: pointer;">
-            <div class="card shadow border-0 border-start border-danger border-5 h-100">
-                <div class="card-body">
-                    <div class="d-flex justify-content-between align-items-center">
-                        <div>
-                            <h6 class="text-muted fw-bold text-uppercase mb-1">Estoque Baixo</h6>
-                            <h2 class="mb-0 text-dark fw-bold">@qtdEstoqueBaixo</h2>
-                        </div>
-                        <div class="bg-danger text-white rounded-circle d-flex align-items-center justify-content-center" style="width: 50px; height: 50px;">
-                            <i class="bi bi-exclamation-triangle fs-4"></i>
-                        </div>
+    <MudGrid>
+        @* CARD: ESTOQUE BAIXO *@
+        <MudItem xs="12" md="4">
+            <MudPaper Elevation="4" Class="pa-4 d-flex flex-column h-100" Style="cursor: pointer; border-left: 6px solid #f44336;" @onclick='() => Nav.NavigateTo("/dashboard/detalhes/estoque")'>
+                <div class="d-flex justify-space-between align-start mb-4">
+                    <div>
+                        <MudText Typo="Typo.subtitle2" Color="Color.Default" Class="text-uppercase fw-bold">Estoque Crítico</MudText>
+                        <MudText Typo="Typo.h3" Color="Color.Dark">@qtdEstoqueBaixo</MudText>
                     </div>
+                    <MudAvatar Color="Color.Error" Variant="Variant.Filled" Size="Size.Large">
+                        <MudIcon Icon="@Icons.Material.Filled.Warning" />
+                    </MudAvatar>
                 </div>
-            </div>
-        </div>
+                <MudText Typo="Typo.body2" Color="Color.Error">Clique para ver os itens a repor</MudText>
+            </MudPaper>
+        </MudItem>
 
-        <div class="col-md-4" @onclick='() => Nav.NavigateTo("/dashboard/detalhes/atrasos")' style="cursor: pointer;">
-            <div class="card shadow border-0 border-start border-warning border-5 h-100">
-                <div class="card-body">
-                    <div class="d-flex justify-content-between align-items-center">
-                        <div>
-                            <h6 class="text-muted fw-bold text-uppercase mb-1">Atrasos (> 12h)</h6>
-                            <h2 class="mb-0 text-dark fw-bold">@qtdAtrasados</h2>
-                        </div>
-                        <div class="bg-warning text-dark rounded-circle d-flex align-items-center justify-content-center" style="width: 50px; height: 50px;">
-                            <i class="bi bi-clock-history fs-4"></i>
-                        </div>
+        @* CARD: ATRASOS *@
+        <MudItem xs="12" md="4">
+            <MudPaper Elevation="4" Class="pa-4 d-flex flex-column h-100" Style="cursor: pointer; border-left: 6px solid #ff9800;" @onclick='() => Nav.NavigateTo("/dashboard/detalhes/atrasos")'>
+                <div class="d-flex justify-space-between align-start mb-4">
+                    <div>
+                        <MudText Typo="Typo.subtitle2" Color="Color.Default" Class="text-uppercase fw-bold">Atrasos (> 12h)</MudText>
+                        <MudText Typo="Typo.h3" Color="Color.Dark">@qtdAtrasados</MudText>
                     </div>
+                    <MudAvatar Color="Color.Warning" Variant="Variant.Filled" Size="Size.Large">
+                        <MudIcon Icon="@Icons.Material.Filled.AccessTime" />
+                    </MudAvatar>
                 </div>
-            </div>
-        </div>
+                <MudText Typo="Typo.body2" Color="Color.Warning">Kits que não regressaram à base</MudText>
+            </MudPaper>
+        </MudItem>
 
-        <div class="col-md-4" @onclick='() => Nav.NavigateTo("/dashboard/detalhes/turno")' style="cursor: pointer;">
-            <div class="card shadow border-0 border-start border-success border-5 h-100">
-                <div class="card-body">
-                    <div class="d-flex justify-content-between align-items-center">
-                        <div>
-                            <h6 class="text-muted fw-bold text-uppercase mb-1">Saídas no Turno</h6>
-                            <h2 class="mb-0 text-dark fw-bold">@qtdSaidasTurno</h2>
-                        </div>
-                        <div class="bg-success text-white rounded-circle d-flex align-items-center justify-content-center" style="width: 50px; height: 50px;">
-                            <i class="bi bi-box-arrow-right fs-4"></i>
-                        </div>
+        @* CARD: SAÍDAS DO TURNO *@
+        <MudItem xs="12" md="4">
+            <MudPaper Elevation="4" Class="pa-4 d-flex flex-column h-100" Style="cursor: pointer; border-left: 6px solid #4caf50;" @onclick='() => Nav.NavigateTo("/dashboard/detalhes/turno")'>
+                <div class="d-flex justify-space-between align-start mb-4">
+                    <div>
+                        <MudText Typo="Typo.subtitle2" Color="Color.Default" Class="text-uppercase fw-bold">Saídas no Turno</MudText>
+                        <MudText Typo="Typo.h3" Color="Color.Dark">@qtdSaidasTurno</MudText>
                     </div>
+                    <MudAvatar Color="Color.Success" Variant="Variant.Filled" Size="Size.Large">
+                        <MudIcon Icon="@Icons.Material.Filled.FlightTakeoff" />
+                    </MudAvatar>
                 </div>
-            </div>
-        </div>
-    </div>
-</div>
+                <MudText Typo="Typo.body2" Color="Color.Success">Movimentações nas últimas 12h</MudText>
+            </MudPaper>
+        </MudItem>
+    </MudGrid>
+</MudContainer>
 
 @code {
     private int qtdEstoqueBaixo;

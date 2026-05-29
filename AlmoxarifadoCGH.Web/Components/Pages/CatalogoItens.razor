@@ -5,173 +5,156 @@
 @inject EstoqueService EstoqueService
 @inject IJSRuntime JS
 @inject NavigationManager Nav
+@inject ISnackbar Snackbar
 
-<div class="container mt-4">
-    <div class="card shadow">
-        <div class="card-header bg-dark text-white d-flex justify-content-between">
-            <h3 class="mb-0"><i class="bi bi-list-check"></i> Catálogo de Materiais</h3>
-            <button class="btn btn-outline-light btn-sm" @onclick="NovoItem">Adicionar Item</button>
-        </div>
-        <div class="card-body">
-            @if (!string.IsNullOrEmpty(mensagemErro))
-            {
-                <div class="alert alert-danger">
-                    <i class="bi bi-exclamation-triangle"></i> @mensagemErro
-                </div>
-            }
-            @if (exibirFormulario)
-            {
-                <EditForm Model="model" OnValidSubmit="Guardar">
-                    <div class="row g-3 mb-4 p-3 border rounded bg-light">
+<MudContainer MaxWidth="MaxWidth.Large" Class="mt-6">
+    <div class="d-flex justify-space-between align-center mb-6">
+        <MudText Typo="Typo.h4">
+            <MudIcon Icon="@Icons.Material.Filled.Inventory" Size="Size.Large" Class="mr-2 mb-n1" />
+            Catálogo de Materiais
+        </MudText>
+        <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Add" OnClick="NovoItem">
+            Adicionar Item
+        </MudButton>
+    </div>
 
-                        <div class="col-md-3">
-                            <label class="form-label">Nome do Item</label>
-                            <InputText @bind-Value="model.Nome" @bind-Value:after="VerificarSeExiste" class="form-control" placeholder="Ex: Bobina" required />
+    @if (exibirFormulario)
+    {
+        <MudPaper Elevation="3" Class="pa-4 mb-6" Style="border-top: 4px solid #594ae2;">
+            <MudText Typo="Typo.h6" Class="mb-4">@(model.Id == 0 ? "Adicionar Novo Item" : "Editar Item")</MudText>
 
+            <EditForm Model="model" OnValidSubmit="Guardar">
+                <DataAnnotationsValidator />
+
+                <MudGrid Class="align-end">
+                    <MudItem xs="12" md="3">
+                        <MudTextField @bind-Value="model.Nome" For="@(() => model.Nome)" @bind-Value:after="VerificarSeExiste" Label="Nome do Item" Variant="Variant.Outlined" Placeholder="Ex: Bobina" Margin="Margin.Dense" />
+                        @if (itemJaExiste)
+                        {
+                            <MudText Typo="Typo.caption" Color="Color.Warning" Class="mt-1 d-block">
+                                <b><MudIcon Icon="@Icons.Material.Filled.Warning" Size="Size.Small" Class="mr-1" Style="vertical-align: text-bottom;" />A Qtd será somada.</b>
+                            </MudText>
+                        }
+                    </MudItem>
+
+                    <MudItem xs="12" md="2">
+                        <MudSelect T="bool" @bind-Value="model.IsConsumivel" Label="Tipo" Disabled="@(itemJaExiste || model.Id != 0)" Variant="Variant.Outlined" Margin="Margin.Dense" AnchorOrigin="Origin.BottomCenter">
+                            <MudSelectItem T="bool" Value="false">Equipamento</MudSelectItem>
+                            <MudSelectItem T="bool" Value="true">Consumível</MudSelectItem>
+                        </MudSelect>
+                    </MudItem>
+
+                    <MudItem xs="12" md="3">
+                        @if (!model.IsConsumivel)
+                        {
+                            <MudTextField @bind-Value="model.Descricao" For="@(() => model.Descricao)" Label="Nº Patrimônio/Série" Variant="Variant.Outlined" Placeholder="Ex: CGH-001" Margin="Margin.Dense" />
+                        }
+                        else
+                        {
+                            <MudTextField @bind-Value="model.Descricao" For="@(() => model.Descricao)" Label="Observação" Variant="Variant.Outlined" Placeholder="Ex: Caixa c/ 50" Disabled="@itemJaExiste" Margin="Margin.Dense" />
+                        }
+                    </MudItem>
+
+                    <MudItem xs="12" md="2">
+                        @if (model.IsConsumivel)
+                        {
+                            <MudNumericField @bind-Value="model.EstoqueAtual" For="@(() => model.EstoqueAtual)" Label="@(itemJaExiste ? "Entrada" : "Qtd")" Variant="Variant.Outlined" Margin="Margin.Dense" Min="0" />
                             @if (itemJaExiste)
                             {
-                                <small class="text-warning fw-bold"><i class="bi bi-exclamation-circle"></i> A Qtd será somada.</small>
+                                <MudText Typo="Typo.caption" Color="Color.Secondary" Class="mt-1 d-block">Atual: @estoqueNoBanco</MudText>
                             }
-                        </div>
+                        }
+                    </MudItem>
 
-                        <div class="col-md-2">
-                            <label class="form-label">Tipo</label>
-                            <InputSelect @bind-Value="model.IsConsumivel" class="form-select" disabled="@itemJaExiste">
-                                <option value="false">Equipamento</option>
-                                <option value="true">Consumível</option>
-                            </InputSelect>
-                        </div>
+                    <MudItem xs="12" md="2">
+                        @if (model.IsConsumivel)
+                        {
+                            <MudNumericField @bind-Value="model.EstoqueMinimo" For="@(() => model.EstoqueMinimo)" Label="Mínimo" Variant="Variant.Outlined" Margin="Margin.Dense" Min="0" />
+                        }
+                    </MudItem>
 
-                        <div class="col-md-3">
-                            @if (!model.IsConsumivel)
-                            {
-                                <label class="form-label fw-bold text-primary">Nº Patrimônio/Série</label>
-                                <InputText @bind-Value="model.Descricao" class="form-control border-primary" placeholder="Ex: CGH-001" />
-                            }
-                            else
-                            {
-                                <label class="form-label text-muted">Observação</label>
-                                <InputText @bind-Value="model.Descricao" class="form-control" placeholder="Ex: Caixa c/ 50" disabled="@itemJaExiste" />
-                            }
-                        </div>
+                    <MudItem xs="12" Class="d-flex justify-end gap-2 mt-4">
+                        <MudButton Variant="Variant.Text" Color="Color.Default" OnClick="() => exibirFormulario = false">Cancelar</MudButton>
+                        <MudButton ButtonType="ButtonType.Submit" Variant="Variant.Filled" Color="Color.Success">Gravar</MudButton>
+                    </MudItem>
+                </MudGrid>
+            </EditForm>
+        </MudPaper>
+    }
 
-                        <div class="col-md-1">
-                            @if (model.IsConsumivel)
-                            {
-                                <label class="form-label">@(itemJaExiste ? "Entrada" : "Qtd")</label>
-                                <InputNumber @bind-Value="model.EstoqueAtual" class="form-control" />
-                                @if (itemJaExiste)
-                                {
-                                    <small class="text-muted">Atual: @estoqueNoBanco</small>
-                                }
-                            }
-                            else
-                            {
-                                // Removemos os campos da tela e do modelo para equipamentos
-                            }
-                        </div>
-
-                        <div class="col-md-1">
-                            @if (model.IsConsumivel)
-                            {
-                                <label class="form-label">Mínimo</label>
-                                <InputNumber @bind-Value="model.EstoqueMinimo" class="form-control" />
-                            }
-                        </div>
-
-                        <div class="col-md-2">
-                            <label class="form-label d-none d-md-block">&nbsp;</label>
-                            <BotaoAcao Tipo="submit" Cor="success" CssClass="w-100" Icone="bi-save" Texto="Gravar" />
-                        </div>
+    <MudTable Items="@listaItens" Hover="true" Elevation="3" Striped="true">
+        <HeaderContent>
+            <MudTh>Nome do Item</MudTh>
+            <MudTh>Tipo</MudTh>
+            <MudTh>Detalhe (Patrimônio/Obs)</MudTh>
+            <MudTh>Estoque</MudTh>
+            <MudTh>Ações</MudTh>
+        </HeaderContent>
+        <RowTemplate Context="item">
+            <MudTd DataLabel="Nome"><MudText Typo="Typo.body1" Class="fw-bold">@item.Nome</MudText></MudTd>
+            <MudTd DataLabel="Tipo">
+                <MudChip T="string" Color="@(item.IsConsumivel ? Color.Dark : Color.Primary)" Size="Size.Small">
+                    @(item.IsConsumivel ? "Consumível" : "Equipamento")
+                </MudChip>
+            </MudTd>
+            <MudTd DataLabel="Detalhe">
+                @if (item.IsConsumivel)
+                {
+                    <MudText Typo="Typo.body2" Color="Color.Secondary">@(string.IsNullOrEmpty(item.Descricao) ? "-" : item.Descricao)</MudText>
+                }
+                else
+                {
+                    <MudText Typo="Typo.body2" Color="Color.Secondary">Múltiplos Patrimônios</MudText>
+                }
+            </MudTd>
+            <MudTd DataLabel="Estoque">
+                @if (item.IsConsumivel)
+                {
+                    <div class="d-flex align-center">
+                        <MudText Typo="Typo.body1" Class="@(item.EstoqueAtual <= item.EstoqueMinimo ? "text-danger fw-bold" : "")">@item.EstoqueAtual</MudText>
+                        @if (item.EstoqueAtual <= item.EstoqueMinimo)
+                        {
+                            <MudTooltip Text="Estoque Crítico!">
+                                <MudIcon Icon="@Icons.Material.Filled.Warning" Color="Color.Error" Size="Size.Small" Class="ml-2" />
+                            </MudTooltip>
+                        }
                     </div>
-                </EditForm>
-            }
-
-            <table class="table table-hover mt-3">
-                <thead class="table-light">
-                    <tr>
-                        <th>Nome</th>
-                        <th>Tipo</th>
-                        <th>Detalhe (Patrimônio/Obs)</th>
-                        <th>Estoque</th>
-                        <th>Ações</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    @foreach (var item in listaItens)
+                }
+                else
+                {
+                    <MudText Typo="Typo.body1" Class="fw-bold">@(item.Equipamentos?.Count ?? 0)</MudText>
+                }
+            </MudTd>
+            <MudTd DataLabel="Ações">
+                <div class="d-flex gap-2">
+                    @if (!item.IsConsumivel)
                     {
-                        <tr>
-                            <td class="fw-bold align-middle">@item.Nome</td>
-
-                            <td class="align-middle">
-                                @if (item.IsConsumivel)
-                                {
-                                    <span class="badge bg-secondary">Consumível</span>
-                                }
-                                else
-                                {
-                                    <span class="badge bg-primary">Equipamento</span>
-                                }
-                            </td>
-
-                            <td class="align-middle">
-                                @if (item.IsConsumivel)
-                                {
-                                    <span class="text-muted">@(string.IsNullOrEmpty(item.Descricao) ? "-" : item.Descricao)</span>
-                                }
-                                else
-                                {
-                                    <span class="text-muted">Múltiplos Patrimônios</span>
-                                }
-                            </td>
-
-                            <td class="align-middle">
-                                @if (item.IsConsumivel)
-                                {
-                                    @item.EstoqueAtual
-                                    @if (item.EstoqueAtual <= item.EstoqueMinimo)
-                                    {
-                                        <span class="badge bg-danger ms-2" title="Estoque Baixo!">!</span>
-                                    }
-                                }
-                                else
-                                {
-                                    <span class="fw-bold">@item.Equipamentos.Count</span>
-                                }
-                            </td>
-
-                            <td class="align-middle">
-                                @if (!item.IsConsumivel)
-                                {
-                                    <BotaoAcao Cor="outline-info" CssClass="btn-sm me-1" Icone="bi-list-ol" Texto="Patrimônios" OnClick="@(() => Nav.NavigateTo($"/catalogo/{item.Id}/patrimonios"))" />
-                                }
-                                <BotaoAcao Cor="outline-primary" CssClass="btn-sm" Icone="bi-pencil" Texto="Editar" OnClick="() => Editar(item)" />
-                                <BotaoAcao Cor="outline-danger" CssClass="btn-sm ms-1" Icone="bi-trash" Texto="Excluir" OnClick="() => Apagar(item)" />
-                            </td>
-                        </tr>
+                        <MudTooltip Text="Gerir Patrimônios (Séries)">
+                            <MudIconButton Icon="@Icons.Material.Filled.FormatListNumbered" Color="Color.Info" Size="Size.Small" OnClick="@(() => Nav.NavigateTo($"/catalogo/{item.Id}/patrimonios"))" />
+                        </MudTooltip>
                     }
-                    @if (!listaItens.Any())
-                    {
-                        <tr>
-                            <td colspan="5" class="text-center text-muted">Nenhum item cadastrado ainda.</td>
-                        </tr>
-                    }
-                </tbody>
-            </table>
-        </div>
-    </div>
-</div>
+                    <MudTooltip Text="Editar">
+                        <MudIconButton Icon="@Icons.Material.Filled.Edit" Color="Color.Primary" Size="Size.Small" OnClick="() => Editar(item)" />
+                    </MudTooltip>
+                    <MudTooltip Text="Excluir">
+                        <MudIconButton Icon="@Icons.Material.Filled.Delete" Color="Color.Error" Size="Size.Small" OnClick="() => Apagar(item)" />
+                    </MudTooltip>
+                </div>
+            </MudTd>
+        </RowTemplate>
+        <PagerContent>
+            <MudTablePager InfoFormat="{first_item}-{last_item} de {all_items}" RowsPerPageString="Itens por página:" />
+        </PagerContent>
+    </MudTable>
+</MudContainer>
 
 @code {
     private List<Catalogo> listaItens = new();
     private Catalogo model = new();
     private bool exibirFormulario = false;
-
-    // Variáveis de controle para a checagem em tempo real
     private bool itemJaExiste = false;
     private int estoqueNoBanco = 0;
     private bool modoEdicaoTabela = false;
-    private string mensagemErro = "";
 
     protected override async Task OnInitializedAsync() => await CarregarDados();
 
@@ -179,7 +162,6 @@
 
     private async Task Guardar()
     {
-        mensagemErro = ""; // Limpa os erros anteriores
         try
         {
             if (itemJaExiste && model.IsConsumivel)
@@ -193,13 +175,13 @@
             }
 
             await EstoqueService.SalvarItemCatalogoAsync(model);
+            Snackbar.Add("Item gravado com sucesso no catálogo!", Severity.Success);
             exibirFormulario = false;
             await CarregarDados();
         }
         catch (Exception ex)
         {
-            // Captura o erro do backend e mostra na tela
-            mensagemErro = ex.Message;
+            Snackbar.Add(ex.Message, Severity.Error);
         }
     }
 
@@ -221,9 +203,6 @@
             model.IsConsumivel = existente.IsConsumivel;
             model.EstoqueMinimo = existente.EstoqueMinimo;
             model.EstoqueAtual = 0;
-
-            // Zera o campo se for equipamento para receber a leitura do novo rádio/celular
-            // Mantém o texto se for consumível (ex: "Caixa c/ 50")
             model.Descricao = existente.IsConsumivel ? existente.Descricao : "";
         }
         else
@@ -235,12 +214,10 @@
 
     private void Editar(Catalogo i)
     {
-        mensagemErro = "";
         model = i;
         modoEdicaoTabela = true;
         itemJaExiste = false;
 
-        // Limpa o patrimônio na edição genérica do catálogo para não tentar regravá-lo
         if (!model.IsConsumivel)
         {
             model.Descricao = "";
@@ -251,8 +228,7 @@
 
     private void NovoItem()
     {
-        mensagemErro = "";
-        model = new Catalogo();
+        model = new Catalogo { IsConsumivel = true }; // Por defeito, abre como Consumível
         itemJaExiste = false;
         modoEdicaoTabela = false;
         exibirFormulario = true;
@@ -260,24 +236,19 @@
 
     private async Task Apagar(Catalogo item)
     {
-        // 1. Pergunta pro usuário se ele tem certeza (Janela padrão do navegador)
-        bool confirmacao = await JS.InvokeAsync<bool>("confirm", $"Tem certeza que deseja apagar '{item.Nome}'?");
-
+        bool confirmacao = await JS.InvokeAsync<bool>("confirm", $"Tem a certeza que deseja apagar '{item.Nome}' do catálogo?");
         if (confirmacao)
         {
-            // 2. Chama o serviço para deletar
             bool sucesso = await EstoqueService.ExcluirItemCatalogoAsync(item.Id);
-
             if (sucesso)
             {
-                await CarregarDados(); // Recarrega a tabela na hora
+                Snackbar.Add("Item excluído com sucesso.", Severity.Success);
+                await CarregarDados();
             }
             else
             {
-                // 3. Se deu erro (DbUpdateException), avisa o usuário
-                await JS.InvokeVoidAsync("alert", "Não foi possível apagar! Este item já possui registros de saída no histórico.");
+                Snackbar.Add("Acesso Negado: Não é possível apagar! Este item já possui registos no Histórico de Movimentações.", Severity.Error);
             }
         }
     }
-
 }

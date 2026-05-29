@@ -6,7 +6,7 @@ using Microsoft.EntityFrameworkCore.Migrations;
 namespace Almoxarifado.Infrastructure.Migrations
 {
     /// <inheritdoc />
-    public partial class InitialCreate : Migration
+    public partial class InitialSqlite : Migration
     {
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
@@ -44,6 +44,22 @@ namespace Almoxarifado.Infrastructure.Migrations
                 });
 
             migrationBuilder.CreateTable(
+                name: "Mochilas",
+                columns: table => new
+                {
+                    Id = table.Column<int>(type: "int", nullable: false)
+                        .Annotation("SqlServer:Identity", "1, 1"),
+                    Numero = table.Column<int>(type: "int", nullable: false),
+                    Status = table.Column<int>(type: "int", nullable: false),
+                    TurnoAtual = table.Column<string>(type: "nvarchar(10)", maxLength: 10, nullable: true),
+                    DuplaAtual = table.Column<string>(type: "nvarchar(150)", maxLength: 150, nullable: true)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_Mochilas", x => x.Id);
+                });
+
+            migrationBuilder.CreateTable(
                 name: "Equipamentos",
                 columns: table => new
                 {
@@ -51,7 +67,8 @@ namespace Almoxarifado.Infrastructure.Migrations
                         .Annotation("SqlServer:Identity", "1, 1"),
                     NumeroSerie = table.Column<string>(type: "nvarchar(50)", maxLength: 50, nullable: false),
                     Status = table.Column<int>(type: "int", nullable: false),
-                    CatalogoId = table.Column<int>(type: "int", nullable: false)
+                    CatalogoId = table.Column<int>(type: "int", nullable: false),
+                    MochilaId = table.Column<int>(type: "int", nullable: true)
                 },
                 constraints: table =>
                 {
@@ -62,6 +79,12 @@ namespace Almoxarifado.Infrastructure.Migrations
                         principalTable: "Catalogos",
                         principalColumn: "Id",
                         onDelete: ReferentialAction.Cascade);
+                    table.ForeignKey(
+                        name: "FK_Equipamentos_Mochilas_MochilaId",
+                        column: x => x.MochilaId,
+                        principalTable: "Mochilas",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Restrict);
                 });
 
             migrationBuilder.CreateTable(
@@ -107,6 +130,11 @@ namespace Almoxarifado.Infrastructure.Migrations
                 column: "CatalogoId");
 
             migrationBuilder.CreateIndex(
+                name: "IX_Equipamentos_MochilaId",
+                table: "Equipamentos",
+                column: "MochilaId");
+
+            migrationBuilder.CreateIndex(
                 name: "IX_Movimentacoes_AgenteId",
                 table: "Movimentacoes",
                 column: "AgenteId");
@@ -136,6 +164,9 @@ namespace Almoxarifado.Infrastructure.Migrations
 
             migrationBuilder.DropTable(
                 name: "Catalogos");
+
+            migrationBuilder.DropTable(
+                name: "Mochilas");
         }
     }
 }

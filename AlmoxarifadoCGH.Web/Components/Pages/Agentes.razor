@@ -3,61 +3,72 @@
 @using Almoxarifado.Domain.Entities
 @using AlmoxarifadoCGH.Web.Services
 @inject EstoqueService EstoqueService
+@inject ISnackbar Snackbar
 
-<div class="container mt-4">
-    <div class="card shadow">
-        <div class="card-header bg-primary text-white d-flex justify-content-between">
-            <h3 class="mb-0">Cadastro de Agentes</h3>
-            <button class="btn btn-light btn-sm" @onclick="NovoAgente">Novo Agente</button>
-        </div>
-        <div class="card-body">
-            @if (exibirFormulario)
-            {
-                <EditForm Model="model" OnValidSubmit="Guardar">
-                    <div class="row g-3 mb-4 p-3 border rounded bg-light">
-                        <div class="col-md-6">
-                            <label class="form-label">Nome Completo</label>
-                            <InputText @bind-Value="model.Nome" class="form-control" placeholder="Ex: João Silva" />
-                        </div>
-                        <div class="col-md-4">
-                            <label class="form-label">Matrícula/ID</label>
-                            <InputText @bind-Value="model.Matricula" class="form-control" placeholder="Ex: CGH-123" />
-                        </div>
-                        <div class="col-md-2 d-flex align-items-end">
-                            <button type="submit" class="btn btn-success w-100">Salvar</button>
-                        </div>
-                    </div>
-                </EditForm>
-            }
-
-            <table class="table table-hover">
-                <thead>
-                    <tr>
-                        <th>ID</th>
-                        <th>Nome</th>
-                        <th>Matrícula</th>
-                        <th>Status</th>
-                        <th>Ações</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    @foreach (var agente in listaAgentes)
-                    {
-                        <tr>
-                            <td>@agente.Id</td>
-                            <td>@agente.Nome</td>
-                            <td>@agente.Matricula</td>
-                            <td><span class="badge @(agente.Ativo ? "bg-success" : "bg-danger")">@(agente.Ativo ? "Ativo" : "Inativo")</span></td>
-                            <td>
-                                <button class="btn btn-sm btn-outline-primary" @onclick="() => Editar(agente)">Editar</button>
-                            </td>
-                        </tr>
-                    }
-                </tbody>
-            </table>
-        </div>
+<MudContainer MaxWidth="MaxWidth.Large" Class="mt-6">
+    <div class="d-flex justify-space-between align-center mb-6">
+        <MudText Typo="Typo.h4">Cadastro de Agentes</MudText>
+        <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.PersonAdd" OnClick="NovoAgente">
+            Novo Agente
+        </MudButton>
     </div>
-</div>
+
+    @if (exibirFormulario)
+    {
+        <MudPaper Elevation="3" Class="pa-4 mb-6" Style="border-top: 4px solid #594ae2;">
+            <MudText Typo="Typo.h6" Class="mb-4">@(model.Id == 0 ? "Adicionar Novo Agente" : "Editar Agente")</MudText>
+
+            @* O componente EditForm nativo do Blazor interliga-se com as DataAnnotations *@
+            <EditForm Model="model" OnValidSubmit="Guardar">
+                <DataAnnotationsValidator />
+
+                <MudGrid Class="align-center">
+                    <MudItem xs="12" md="5">
+                        @* O parâmetro For="@(() => model.Nome)" diz ao MudBlazor para procurar os erros lá na classe Agente.cs *@
+                        <MudTextField @bind-Value="model.Nome" For="@(() => model.Nome)" Label="Nome Completo" Variant="Variant.Outlined" Margin="Margin.Dense" Placeholder="Ex: João Silva" />
+                    </MudItem>
+                    <MudItem xs="12" md="3">
+                        @* Aqui a regra de ouro: Disabled="@(model.Id != 0)" trava o campo na edição! *@
+                        <MudTextField @bind-Value="model.Matricula" For="@(() => model.Matricula)" Disabled="@(model.Id != 0)" Label="Matrícula / RE (Apenas Números)" Variant="Variant.Outlined" Margin="Margin.Dense" Placeholder="Ex: 123456" />
+                    </MudItem>
+                    <MudItem xs="12" md="2" Class="d-flex justify-center">
+                        <MudSwitch @bind-Value="model.Ativo" Label="@(model.Ativo ? "Operacional" : "Inativo")" Color="Color.Success" />
+                    </MudItem>
+                    <MudItem xs="12" md="2" Class="d-flex gap-2 mt-2">
+                        <MudButton Variant="Variant.Text" Color="Color.Default" OnClick="() => exibirFormulario = false">Cancelar</MudButton>
+                        <MudButton ButtonType="ButtonType.Submit" Variant="Variant.Filled" Color="Color.Success">Gravar</MudButton>
+                    </MudItem>
+                </MudGrid>
+            </EditForm>
+        </MudPaper>
+    }
+
+    <MudTable Items="@listaAgentes" Hover="true" Elevation="3" Striped="true">
+        <HeaderContent>
+            <MudTh>Matrícula</MudTh>
+            <MudTh>Nome do Agente</MudTh>
+            <MudTh>Status</MudTh>
+            <MudTh>Ações</MudTh>
+        </HeaderContent>
+        <RowTemplate Context="agente">
+            <MudTd DataLabel="Matrícula"><MudText Typo="Typo.body2" Class="fw-bold">@agente.Matricula</MudText></MudTd>
+            <MudTd DataLabel="Nome">@agente.Nome</MudTd>
+            <MudTd DataLabel="Status">
+                <MudChip T="string" Color="@(agente.Ativo ? Color.Success : Color.Error)" Size="Size.Small">
+                    @(agente.Ativo ? "Operacional" : "Inativo")
+                </MudChip>
+            </MudTd>
+            <MudTd DataLabel="Ações">
+                <MudTooltip Text="Editar Cadastro">
+                    <MudIconButton Icon="@Icons.Material.Filled.Edit" Color="Color.Primary" Size="Size.Small" OnClick="() => Editar(agente)" />
+                </MudTooltip>
+            </MudTd>
+        </RowTemplate>
+        <PagerContent>
+            <MudTablePager InfoFormat="{first_item}-{last_item} de {all_items}" RowsPerPageString="Registros por página:" />
+        </PagerContent>
+    </MudTable>
+</MudContainer>
 
 @code {
     private List<Agente> listaAgentes = new();
@@ -68,14 +79,24 @@
 
     private async Task CarregarDados() => listaAgentes = await EstoqueService.ListarAgentesAsync();
 
-    private void NovoAgente() { model = new Agente(); exibirFormulario = true; }
+    private void NovoAgente() { model = new Agente { Ativo = true }; exibirFormulario = true; }
 
     private void Editar(Agente a) { model = a; exibirFormulario = true; }
 
+    // Repare que removi aquele "if" manual que verificava se o nome estava vazio.
+    // O OnValidSubmit do EditForm já garante que este método só roda se as anotações passarem.
     private async Task Guardar()
     {
-        await EstoqueService.SalvarAgenteAsync(model);
-        exibirFormulario = false;
-        await CarregarDados();
+        try
+        {
+            await EstoqueService.SalvarAgenteAsync(model);
+            Snackbar.Add("Agente salvo com sucesso!", Severity.Success);
+            exibirFormulario = false;
+            await CarregarDados();
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Erro no banco: {ex.Message}", Severity.Error);
+        }
     }
 }

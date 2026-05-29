@@ -11,7 +11,7 @@ var builder = WebApplication.CreateBuilder(args);
 // 1. Mude para AddDbContextFactory
 var connectionString = builder.Configuration.GetConnectionString("DefaultConnection");
 builder.Services.AddDbContextFactory<AppDbContext>(options =>
-    options.UseSqlServer(connectionString));
+    options.UseSqlite(builder.Configuration.GetConnectionString("DefaultConnection")));
 
 // 2. Mantenha o serviço como Scoped
 builder.Services.AddScoped<EstoqueService>();
@@ -27,6 +27,17 @@ builder.Services.AddRazorComponents()
     .AddInteractiveServerComponents();
 
 var app = builder.Build();
+
+// ============================================================
+// MAGIA PLUG AND PLAY: Cria a base de dados automaticamente
+// ============================================================
+using (var scope = app.Services.CreateScope())
+{
+    var factory = scope.ServiceProvider.GetRequiredService<IDbContextFactory<AppDbContext>>();
+    using var context = factory.CreateDbContext();
+    context.Database.Migrate(); // Se o ficheiro GuardaDigital.db não existir, ele cria na hora!
+}
+// ============================================================
 
 // Configure the HTTP request pipeline.
 if (!app.Environment.IsDevelopment())
